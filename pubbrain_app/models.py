@@ -6,7 +6,7 @@ from django.db import models
 class BrainRegion(models.Model):
     
     # name of the region - from the ontology
-    name=models.CharField(max_length=100)
+    name=models.TextField(max_length=1000)
     
     # the pubmed query for the region
     query=models.CharField(max_length=255)
@@ -40,7 +40,7 @@ class BrainRegion(models.Model):
 # represents a PubMed ID
 
 class Pmid(models.Model):
-    pubmed_id=models.CharField(max_length=20)
+    pubmed_id=models.IntegerField(max_length=20, primary_key=True, db_index=True)
     date_added=models.DateField(auto_now_add=True,auto_now=True)
     # link to the brain regions mentioned in the abstract
     brain_regions_named=models.ManyToManyField(BrainRegion)

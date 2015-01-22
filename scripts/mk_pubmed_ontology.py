@@ -1,5 +1,5 @@
 """
-convert orginal ontology to YAML
+convert original ontology to YAML
 make two files:
 - one that just contains the hierarchy
 - another that just contains the mappings from ontology terms to search queries

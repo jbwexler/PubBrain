@@ -7,7 +7,7 @@ import django
 django.setup()
 
 from pubbrain_app import models
-from PubBrain.utils import *
+# from PubBrain.utils import *
 
 # set up toy DB
 
