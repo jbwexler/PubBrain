@@ -25,14 +25,15 @@ def manual_transaction(record, brainRegion):
         except:
             entry=models.Pmid.create(id)
             entry.save()
-            entry.brain_regions_named.add(brainRegion)
+        entry.brain_regions_named.add(brainRegion)
     transaction.commit()
 
 def index_pubmed(force=False):
     print 'getting pubmed records from scratch'
     
     for brainRegion in models.BrainRegion.objects.all():
-        if (brainRegion.last_indexed - datetime.date.today()).days > 30 or force:
+        print [x.name for x in brainRegion.atlasregions.all()]
+        if (brainRegion.last_indexed - datetime.date.today()).days > 30 or force or len(brainRegion.atlasregions.all())==0:
             print brainRegion.name,brainRegion.query
             handle=Entrez.esearch(db='pubmed',term=brainRegion.query,retmax=100000)
             record = Entrez.read(handle)
@@ -47,4 +48,4 @@ def index_pubmed(force=False):
 
             
             
-profile.run('print index_pubmed(True); print')
+profile.run('print index_pubmed(); print')
