@@ -31,20 +31,21 @@ def manual_transaction(record, brainRegion):
 def index_pubmed(force=False):
     print 'getting pubmed records from scratch'
     
-    for brainRegion in models.BrainRegion.objects.all():
-        print [x.name for x in brainRegion.atlasregions.all()]
-        if (brainRegion.last_indexed - datetime.date.today()).days > 30 or force or len(brainRegion.atlasregions.all())==0:
-            print brainRegion.name,brainRegion.query
-            handle=Entrez.esearch(db='pubmed',term=brainRegion.query,retmax=100000)
-            record = Entrez.read(handle)
-            print "number of ids %d"%len(record['IdList'])
+    for region in models.BrainRegion.objects.all():
+        if (region.last_indexed - datetime.date.today()).days > 30 or force or not region.atlasregions.all():
+            print region.name,region.query
+            for syn in region.synonyms.split(","):
+                query = '"' + syn + '"[tiab]'
+                handle=Entrez.esearch(db='pubmed',term=query,retmax=100000)
+                record = Entrez.read(handle)
+                print "number of ids %d"%len(record['IdList'])
             
-            manual_transaction(record, brainRegion)
+                manual_transaction(record, region)
 
                  
-            brainRegion.last_indexed=datetime.date.today()
+                region.last_indexed=datetime.date.today()
         else:
-            print 'using existing results for',brainRegion.name
+            print 'using existing results for',region.name
 
             
             

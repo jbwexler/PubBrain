@@ -17,10 +17,9 @@ class BrainRegion(models.Model):
     # if so, save the voxels associated with the region (as a cPickle)
     atlas_voxels=models.TextField()
     
+    synonyms=models.TextField(null=True, blank=True)
     # parent-child relations in the partonomy
-    # a region can only have one parent but can have multiple children
-    parent=models.ForeignKey('self', null=True, blank=True)
-    children=models.ManyToManyField('self', null=True, blank=True)
+    parents=models.ManyToManyField('self', null=True, blank=True, symmetrical=False, related_name='children')
     
     # a list of the atlas areas associated with this term
     # if is_atlasregion==True then this will be same as the name

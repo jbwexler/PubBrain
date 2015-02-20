@@ -26,11 +26,12 @@ def storeFMAasGraph(owlPath, pklFile, pklDir = ''):
                 PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
                 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
                 PREFIX fma: <http://purl.org/sig/ont/fma/>
-                SELECT ?region
+                SELECT ?region ?regionlabel
                 WHERE { 
                 ?region rdfs:subClassOf+ ?head.
                 {?head fma:preferred_name "Segment of brain"^^<http://www.w3.org/2001/XMLSchema#string>}
                 UNION {?head fma:preferred_name "Region of cerebral cortex"^^<http://www.w3.org/2001/XMLSchema#string>}
+                ?region rdfs:label ?regionlabel
                 }
                 """)
     
@@ -53,7 +54,7 @@ def storeFMAasGraph(owlPath, pklFile, pklDir = ''):
                 ?restrictionPar owl:someValuesFrom ?parent.
                  }
                 """)
-    
+      
     # query for all regions that have some sort of child relationship and also finds the child region
     childrenQuery = g.query(
                 """
@@ -77,18 +78,20 @@ def storeFMAasGraph(owlPath, pklFile, pklDir = ''):
     # adding nodes to graph for all regions in 'regional part of brain' and includes their name
     for x in allQuery:
         node = str(x.region).lower()
-        print node
-        node_name = str(x.region).lower()
+        print 'all', node
+        node_name = str(x.regionlabel).lower()
         netx.add_node(node, {'name':node_name})
-    
+
     # adding edges for all pairs found from parentQuery
     for x in parentsQuery:
+        print 'parents', node
         node = str(x.region).lower()
         parent = str(x.parent).lower()
         netx.add_edge(parent, node)    
     
     # adding edges for all pairs found from childQuery
     for x in childrenQuery:
+        print 'children', node
         node = str(x.region).lower()
         child = str(x.child).lower()
         netx.add_edge(node, child)    
