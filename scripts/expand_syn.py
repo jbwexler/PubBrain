@@ -18,17 +18,28 @@ def getSynonyms(keyword):
 	keywordQuery = keywordQuery.replace('\\', '')
 	hdr = {'Accept': 'ext/html,application/xhtml+xml,application/xml,*/*'}
 	target_url = 'http://nif-services.neuinfo.org/ontoquest/getprop/term/' + keywordQuery
-	request = urllib2.Request(target_url,headers=hdr)
-	synFile = urllib2.urlopen(request)		
+	for i in range(3):
+		try:
+			request = urllib2.Request(target_url,headers=hdr)
+			synFile = urllib2.urlopen(request)	
+		except:
+			pass
+		else:
+			break
 	tree = ET.parse(synFile)
 	root = tree.getroot()
 
 	classes = root.findall('data/classes/class')
 	syn_list = []
 	for element in classes:
-		synonyms = element.findall("properties/property[@name='has_exact_synonym']")
+		has_exact_synonyms = element.findall("properties/property[@name='has_exact_synonym']")
+		has_related_synonym = element.findall("properties/property[@name='has_related_synonym']")
+		synonym_ = element.findall("properties/property[@name='synonym']")
+		synonyms = has_exact_synonyms + has_related_synonym + synonym_
 		for syn in synonyms:
-			syn_list.append(syn.text)
-	syn_list.append(keyword)
-	return syn_list
-
+			#don't add synonyms if they are only numbers
+			if not syn.text.isdigit():
+				syn_list.append(syn.text.lower())
+	syn_list.append(keyword.lower())
+	syn_list_final = list(set(syn_list))
+	return syn_list_final

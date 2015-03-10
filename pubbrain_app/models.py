@@ -1,6 +1,15 @@
 from django.db import models
 
 
+# represents an atlas region
+class AtlasPkl(models.Model):
+    name=models.TextField(max_length=1000)
+    atlas=models.TextField(max_length=1000)
+    pkl=models.TextField(max_length=1000)
+    @classmethod
+    def create(cls, pkl):
+        entry = cls(pkl=pkl)
+        return entry
 
 # represents a brain region from the ontology   
 class BrainRegion(models.Model):
@@ -15,7 +24,7 @@ class BrainRegion(models.Model):
     is_atlasregion=models.BooleanField(default=False)
     
     # if so, save the voxels associated with the region (as a cPickle)
-    atlas_voxels=models.TextField()
+    atlas_voxels=models.ManyToManyField(AtlasPkl, related_name='BrainRegions')
     
     synonyms=models.TextField(null=True, blank=True)
     # parent-child relations in the partonomy
@@ -28,7 +37,7 @@ class BrainRegion(models.Model):
     # by a number of specific parts of the frontal lobe in the atlas)
     atlasregions=models.ManyToManyField('self', null=True, blank=True,symmetrical=False,related_name="+")
     
-    last_indexed=models.DateField(auto_now_add=True,auto_now=True)
+    last_indexed=models.DateField(null=True, blank=True)
     
     @classmethod
     def create(cls, name):
@@ -64,4 +73,4 @@ class PubmedSearch(models.Model):
         result = cls(query=query)
         return result
 
-   
+

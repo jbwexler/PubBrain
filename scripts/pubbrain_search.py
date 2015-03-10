@@ -44,7 +44,7 @@ def pklsToNifti(atlasRegFreq, aff):
     sumArray = np.zeros((91,109,91))
     for region, freq in atlasRegFreq.items():
         print region.name, freq
-        if region.atlas_voxels != '':
+        if region.atlas_voxels:
             with open(os.path.join(os.getcwd(),'pickle_files/voxels', region.atlas_voxels),'rb') as input:
                 voxels = pickle.load(input)
 

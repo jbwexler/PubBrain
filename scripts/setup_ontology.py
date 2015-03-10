@@ -5,93 +5,110 @@ script to set up toy example
 
 import django
 import cPickle as pickle
-import networkx as nx
 from expand_syn import getSynonyms
 import os
 from nltk.sem.chat80 import region
+from pip._vendor.distlib._backport.tarfile import TUREAD
+from scripts.manual_changes import manualChanges
+from pubbrain_app.models import *
 django.setup()
 
 from pubbrain_app import models
 
-def setupOntology(graph):
+def compareNames(ontName, pklDict):
+    # compares an ont region with all the pkl sets in the pklDict. returns a list of relative pkl paths of matching atlas regions
+    ontName = filter(lambda x: str.isalnum(x) or str.isspace(x), ontName)
+    ontRegSet = set(ontName.split(' '))
+    removeSet = set(['l', 'r', 'right', 'left', 'wm', 'gm'])
+    ontRegSet.difference_update(removeSet)
+    voxels = []
+    for object, words in pklDict.items():
+        if words == ontRegSet:
+            voxels.append(object)
+    return voxels
+
+def decodeVoxelPkls():
+    # creates a dictionary with keys as relative pkl paths and values as sets of words corresponding to the region name
+    pklDict = {}
+    removeSet = set(['l', 'r', 'right', 'left', 'wm', 'gm'])
+    for object in AtlasPkl.objects.all():
+        atlasReg = object.name
+        atlasReg = filter(lambda x: str.isalnum(x) or str.isspace(x), atlasReg)
+        atlasRegSet = set(atlasReg.split(' '))
+        atlasRegSet.difference_update(removeSet)
+        pklDict[object] = atlasRegSet
+    return pklDict            
+                
+def getOrAddRegion(regionName):
+    synonyms = getSynonyms(regionName)
+    
+    # returns region if it or a synonym already exist. if region is new, will create it with query and is_atlasregion = False
+    for syn in synonyms:
+        fooList=models.BrainRegion.objects.filter(name=syn)
+        if fooList:
+            foo = fooList[0]
+            break
+    try:
+        return foo
+    except:
+        'adding new'
+        foo=models.BrainRegion.create(regionName)
+        foo.query='"' + regionName + '"[tiab]'
+        foo.is_atlasregion=False
+        foo.save()
+    
+    # adds matching 
+    atlas_voxels = []
+    pklDict = decodeVoxelPkls()
+    for region in synonyms:
+        atlas_voxels += compareNames(region, pklDict) 
+
+
+    # will then add/update atlasregions, atlas_voxels, is_atlasregion and synonyms
+    if atlas_voxels:
+        foo.atlasregions.add(foo)
+        for object in atlas_voxels:
+            foo.atlas_voxels.add(object)
+        foo.is_atlasregion=True
+    if synonyms:
+        foo.synonyms = "$".join(synonyms)
+    foo.save()
+    return foo
+                
+def setupOntology(pkl):
     #takes a netx graph and adds each node. adds the following fields if applicable: synonyms, is_atlasregion, atlas_voxels, query, atlasregions
-    with open(graph,'rb') as input:
-        graph = pickle.load(input)
+    with open(pkl,'rb') as inputFile:
+        graph = pickle.load(inputFile)
     
     for node in graph:
-        name = graph.node[node]['name']
-        synonymsInit = getSynonyms(name)
+        if 'name' not in graph.node[node].keys():
+            continue
+        regionName = graph.node[node]['name']
+        print regionName
         
-        #remove synonyms if they are only numbers
-        synonyms = [syn for syn in synonymsInit if syn.isdigit() == False]
-        
-        # see if region or any synonyms are in atlas by seeing if their name matches pkl file.
-        # if there's a match, the model object for each synonym should list that region as
-        # atlasregions. the atlas region objects themselves should list the pkl file(s) as
-        # atlas_voxels
-
-        atlas_voxels = []
-        for region in synonyms:
-            formatName = region.replace('/', '_').replace(' ', '_') + '.pkl'
-            for folder in os.listdir('pickle_files/voxels/'):
-                if not folder.startswith('.'):
-                    for file_name in os.listdir(os.path.join('pickle_files/voxels/', folder)):
-                        if file_name == formatName:
-                            atlas_voxels.append((os.path.join(folder, file_name)))
-                        
-    #     if atlas_voxels != {}:
-    #         print synonyms, atlas_voxels
-        
-        # if region is new, will create it with query and is_atlasregion = False
-        try:
-            foo=models.BrainRegion.objects.get(name=name)
-        except:
-            foo=models.BrainRegion.create(name)
-            foo.query='"' + region + '"[tiab]'
-            foo.is_atlasregion=False
-        if atlas_voxels:
-            foo.is_atlasregion=True
-        foo.save()
-        # will then add/update atlas_voxels, synonyms and atlasregions
-        if atlas_voxels:
-            foo.atlasregions.add(foo)
-            foo.atlas_voxels = ",".join(atlas_voxels)
-        if synonyms:
-            foo.synonyms = ",".join(synonyms)
-        foo.save()
+        foo = getOrAddRegion(regionName)
         # add parents
-        parents = [graph.node[x]['name'] for x in graph.predecessors_iter(node)]
+        # should be able to remove the if part of next line (and children) once i fix the graph
+        parents = [graph.node[x]['name'] for x in graph.predecessors_iter(node) if 'name' in graph.node[x].keys()]
         for parent in parents:
-            try:
-                parentObj = models.BrainRegion.objects.get(name=parent)
-            except:
-                parentObj=models.BrainRegion.create(parent)
-                parentObj.query='"' + region + '"[tiab]'
-                parentObj.is_atlasregion=False
-            parentObj.save()
-            print parentObj.query
-            foo.parents.add(parentObj)
-            foo.save()
+            if parent != regionName:
+                parentObj = getOrAddRegion(parent)
+                foo.parents.add(parentObj)
+                foo.save()
                 
         #add children
-        children = [graph.node[x]['name'] for x in graph.successors_iter(node)]
+        children = [graph.node[x]['name'] for x in graph.successors_iter(node) if 'name' in graph.node[x].keys()]
         for child in children:
-            try:
-                childObj = models.BrainRegion.objects.get(name=child)
-            except:
-                childObj=models.BrainRegion.create(child)
-                childObj.query='"' + region + '"[tiab]'
-                childObj.is_atlasregion=False
-            childObj.save()
-            childObj.parents.add(foo)
-            childObj.save()
-            
+            if child != regionName:
+                childObj = getOrAddRegion(child)
+                childObj.parents.add(foo)
+                childObj.save()
         
         
 def parChiRecursion(region, direction, level = ''):
     level += '_'
     if region.is_atlasregion == True:
-        print 'match'
+        print '!!!!match!!!!'
         return [region]
     else:
         matchingRelatives = []
@@ -112,32 +129,67 @@ def addParChiSearch():
     for region in models.BrainRegion.objects.filter(is_atlasregion=False):
         print region.name
         matches = parChiRecursion(region, 'parents') + parChiRecursion(region, 'children')
+        region.atlasregions.clear()
+        region.save()
         for match in matches:
             region.atlasregions.add(match)
+            
+def addAtlasPkls():
+    for folder in os.listdir('pickle_files/voxels/'):
+        if not folder.startswith('.'):
+            for fileName in os.listdir(os.path.join('pickle_files/voxels/', folder)):
+                pkl = os.path.join(folder,fileName)
+                atlas = folder.replace('_', ' ')
+                name = fileName.replace('_', ' ').replace('.pkl', '')
+                print pkl, atlas, name
+                try:
+                    AtlasPkl.objects.get(pkl=pkl)
+                except:
+                    foo = AtlasPkl.create(pkl)
+                foo.atlas = atlas
+                foo.name = name
+                foo.save()
         
+def delSynRegions():
+    # deletes regions that who are a synonym of another region (presumably only an issue w/ multiple ontologies). note: the updated setupOntology()
+    # function will prevent synonym regions from being created so this function won't be necessary for now on
+    for region in BrainRegion.objects.exclude(synonyms=None):
+        synonyms = region.synonyms.split("$")
+        synonyms.remove(region.name)
+        for syn in synonyms:
+            if BrainRegion.objects.filter(name=syn):
+                region.delete()
+                region.save()
+                print syn
+                print "deleted: %s" %region.name
+                
+def delSamePar():
+    #removes self-parent and self-child relationships
+    for region in BrainRegion.objects.all():
+        if region in region.parents.all():
+            region.parents.remove(region)
+            region.save()
+        if region in region.children.all():
+            region.children.remove(region)
+            region.save()
+        print region
 
-addParChiSearch()
-    
+def redoSyns():
+    # will update the synonyms of each BrainRegion
+    for region in BrainRegion.objects.exclude(synonyms=None):
+        newSyn = getSynonyms(region.name)
+        newSynStr = "$".join(newSyn)
+        print newSynStr
+        region.synonyms = newSynStr
+        region.save()
 
-# setupOntology("NIFgraph.pkl")
+# setupOntology("uberongraph.pkl")
 
-#execfile('scripts/index_pubmed.py')
+# addParChiSearch()
 
-# use the outputs from mk_combined_atlas.py
-# generate a toy atlas dictionary
-# f=open('scripts/atlas_to_ontology_dict.txt','w')
-# f.write('hippocampus\thippocampus\n')
-# f.write('inferior frontal gyrus\tinferior frontal gyrus\n')
-# f.write('middle frontal gyrus\tmiddle frontal gyrus\n')
-# f.close()
-# 
-# 
-# # use the toy dictionary to add voxel mappings for atlas regions to db
-# #execfile('scripts/link_atlasRegions_to_brainRegions.py')
-# 
-# srch=models.PubmedSearch.create('hippocampus')
-# srch.save()
-# srch.pubmed_ids.add(models.Pmid.objects.get(pubmed_id='25244639'))
-# srch.pubmed_ids.add(models.Pmid.objects.get(pubmed_id='25244085'))
-# srch.pubmed_ids.add(models.Pmid.objects.get(pubmed_id='14497900'))
-# srch.pubmed_ids.add(models.Pmid.objects.get(pubmed_id='22511924'))
+# manualChanges()
+
+# delSynRegions()
+
+
+
