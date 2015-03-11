@@ -24,6 +24,7 @@ def compareNames(ontName, pklDict):
     voxels = []
     for object, words in pklDict.items():
         if words == ontRegSet:
+            print 'pkl: ', object.pkl
             voxels.append(object)
     return voxels
 
@@ -32,22 +33,23 @@ def decodeVoxelPkls():
     pklDict = {}
     removeSet = set(['l', 'r', 'right', 'left', 'wm', 'gm'])
     for object in AtlasPkl.objects.all():
-        atlasReg = object.name
+        atlasReg = str(object.name)
         atlasReg = filter(lambda x: str.isalnum(x) or str.isspace(x), atlasReg)
         atlasRegSet = set(atlasReg.split(' '))
         atlasRegSet.difference_update(removeSet)
         pklDict[object] = atlasRegSet
     return pklDict            
                 
-def getOrAddRegion(regionName):
+def getOrAddRegion(regionName, pklDict):
     synonyms = getSynonyms(regionName)
     
     # returns region if it or a synonym already exist. if region is new, will create it with query and is_atlasregion = False
     for syn in synonyms:
-        fooList=models.BrainRegion.objects.filter(name=syn)
-        if fooList:
-            foo = fooList[0]
-            break
+        if syn != regionName:
+            fooList=models.BrainRegion.objects.filter(name=syn)
+            if fooList:
+                foo = fooList[0]
+                break
     try:
         return foo
     except:
@@ -59,7 +61,7 @@ def getOrAddRegion(regionName):
     
     # adds matching 
     atlas_voxels = []
-    pklDict = decodeVoxelPkls()
+
     for region in synonyms:
         atlas_voxels += compareNames(region, pklDict) 
 
@@ -80,19 +82,20 @@ def setupOntology(pkl):
     with open(pkl,'rb') as inputFile:
         graph = pickle.load(inputFile)
     
+    pklDict = decodeVoxelPkls()
     for node in graph:
         if 'name' not in graph.node[node].keys():
             continue
         regionName = graph.node[node]['name']
-        print regionName
+#         print regionName
         
-        foo = getOrAddRegion(regionName)
+        foo = getOrAddRegion(regionName, pklDict)
         # add parents
         # should be able to remove the if part of next line (and children) once i fix the graph
         parents = [graph.node[x]['name'] for x in graph.predecessors_iter(node) if 'name' in graph.node[x].keys()]
         for parent in parents:
             if parent != regionName:
-                parentObj = getOrAddRegion(parent)
+                parentObj = getOrAddRegion(parent, pklDict)
                 foo.parents.add(parentObj)
                 foo.save()
                 
@@ -100,7 +103,7 @@ def setupOntology(pkl):
         children = [graph.node[x]['name'] for x in graph.successors_iter(node) if 'name' in graph.node[x].keys()]
         for child in children:
             if child != regionName:
-                childObj = getOrAddRegion(child)
+                childObj = getOrAddRegion(child, pklDict)
                 childObj.parents.add(foo)
                 childObj.save()
         
@@ -183,7 +186,7 @@ def redoSyns():
         region.synonyms = newSynStr
         region.save()
 
-# setupOntology("uberongraph.pkl")
+setupOntology("uberongraph.pkl")
 
 # addParChiSearch()
 
