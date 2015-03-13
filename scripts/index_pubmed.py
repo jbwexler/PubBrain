@@ -17,7 +17,7 @@ from django.db import transaction
 
 
 @transaction.commit_manually
-def manual_transaction(record, brainRegion):
+def manual_transaction(record, brainRegion, side):
     for id in record['IdList']:
         #print id
         try:
@@ -25,7 +25,13 @@ def manual_transaction(record, brainRegion):
         except:
             entry=models.Pmid.create(id)
             entry.save()
-        entry.brain_regions_named.add(brainRegion)
+        if side == 'left ':
+            entry.left_brain_regions.add(brainRegion)
+        elif side =='right ':
+            entry.right_brain_regions.add(brainRegion)
+        else:
+            entry.uni_brain_regions.add(brainRegion)
+            
     transaction.commit()
 
 def index_pubmed(force=False):
@@ -34,20 +40,23 @@ def index_pubmed(force=False):
     for region in models.BrainRegion.objects.all():
         if region.last_indexed == None or (datetime.date.today() - region.last_indexed).days > 30 or force:
             print region.name,region.query, region.pk
-            region.pmid_set.clear()
+            region.uni_pmids.clear()
+            region.left_pmids.clear()
+            region.right_pmids.clear()
             for syn in region.synonyms.split("$"):
-                query = '"' + syn + '"[tiab]'
-                print query
-                try:
-                    handle=Entrez.esearch(db='pubmed',term=query,retmax=100000)
-                    record = Entrez.read(handle)
-                except:
-                    errorList.append(region.name)
-                    continue
+                for side in ['', 'left ', 'right ']:
+                    query = '"' + side + syn + '"[tiab]'
+                    print query
+                    try:
+                        handle=Entrez.esearch(db='pubmed',term=query,retmax=100000)
+                        record = Entrez.read(handle)
+                    except:
+                        errorList.append(region.name)
+                        continue
+                    
+                    print "number of ids %d"%len(record['IdList'])
                 
-                print "number of ids %d"%len(record['IdList'])
-            
-                manual_transaction(record, region)
+                    manual_transaction(record, region, side)
 
                  
             region.last_indexed=datetime.date.today()

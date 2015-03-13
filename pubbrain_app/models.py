@@ -3,9 +3,15 @@ from django.db import models
 
 # represents an atlas region
 class AtlasPkl(models.Model):
+    side_choices = (
+    ('left', 'left'),
+    ('right', 'right'),
+    ('unilateral', 'unilateral'))
+    
     name=models.TextField(max_length=1000)
-    atlas=models.TextField(max_length=1000)
-    pkl=models.TextField(max_length=1000)
+    atlas=models.TextField(max_length=1000, blank=True, null=True)
+    pkl=models.TextField(max_length=1000, blank=True, null=True)
+    side=models.TextField(max_length=1000, choices=side_choices, null=True, blank=True)
     @classmethod
     def create(cls, pkl):
         entry = cls(pkl=pkl)
@@ -24,9 +30,11 @@ class BrainRegion(models.Model):
     is_atlasregion=models.BooleanField(default=False)
     
     # if so, save the voxels associated with the region (as a cPickle)
-    atlas_voxels=models.ManyToManyField(AtlasPkl, related_name='BrainRegions')
+    uni_atlas_voxels=models.ManyToManyField(AtlasPkl, related_name='uni_brainregions')
+    left_atlas_voxels=models.ManyToManyField(AtlasPkl, related_name='left_brainregions')
+    right_atlas_voxels=models.ManyToManyField(AtlasPkl, related_name='right_brainregions')
     
-    synonyms=models.TextField(null=True, blank=True)
+    synonyms=models.TextField(blank=True, null=True)
     # parent-child relations in the partonomy
     parents=models.ManyToManyField('self', null=True, blank=True, symmetrical=False, related_name='children')
     
@@ -35,7 +43,8 @@ class BrainRegion(models.Model):
     # in other cases, it may refer to a single parent
     # or to multiple children (e.g., "frontal lobe" is represented
     # by a number of specific parts of the frontal lobe in the atlas)
-    atlasregions=models.ManyToManyField('self', null=True, blank=True,symmetrical=False,related_name="+")
+    atlasregions=models.ManyToManyField('self', null=True, blank=True,symmetrical=False)
+    
     
     last_indexed=models.DateField(null=True, blank=True)
     
@@ -51,7 +60,9 @@ class Pmid(models.Model):
     pubmed_id=models.IntegerField(max_length=20, primary_key=True, db_index=True)
     date_added=models.DateField(auto_now_add=True,auto_now=True)
     # link to the brain regions mentioned in the abstract
-    brain_regions_named=models.ManyToManyField(BrainRegion)
+    uni_brain_regions=models.ManyToManyField(BrainRegion, null=True, blank=True, related_name='uni_pmids')
+    left_brain_regions=models.ManyToManyField(BrainRegion, null=True, blank=True, related_name='left_pmids')
+    right_brain_regions=models.ManyToManyField(BrainRegion, null=True, blank=True, related_name='right_pmids')
     title=models.CharField(max_length=255,default='')
     
     @classmethod

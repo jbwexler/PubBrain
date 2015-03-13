@@ -11,17 +11,34 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
+            name='AtlasPkl',
+            fields=[
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('name', models.TextField(max_length=1000)),
+                ('atlas', models.TextField(max_length=1000, null=True, blank=True)),
+                ('pkl', models.TextField(max_length=1000, null=True, blank=True)),
+                ('side', models.TextField(blank=True, max_length=1000, null=True, choices=[(b'left', b'left'), (b'right', b'right'), (b'unilateral', b'unilateral')])),
+            ],
+            options={
+            },
+            bases=(models.Model,),
+        ),
+        migrations.CreateModel(
             name='BrainRegion',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('name', models.CharField(max_length=100)),
+                ('name', models.TextField(max_length=1000)),
                 ('query', models.CharField(max_length=255)),
                 ('is_atlasregion', models.BooleanField(default=False)),
-                ('atlas_voxels', models.TextField()),
-                ('last_indexed', models.DateField(auto_now=True, auto_now_add=True)),
-                ('atlasregions', models.ManyToManyField(related_name='+', null=True, to='pubbrain_app.BrainRegion', blank=True)),
-                ('children', models.ManyToManyField(related_name='children_rel_+', null=True, to='pubbrain_app.BrainRegion', blank=True)),
-                ('parent', models.ForeignKey(blank=True, to='pubbrain_app.BrainRegion', null=True)),
+                ('synonyms', models.TextField(null=True, blank=True)),
+                ('last_indexed', models.DateField(null=True, blank=True)),
+                ('left_atlas_regions', models.ManyToManyField(related_name='left_brainregions', null=True, to='pubbrain_app.BrainRegion', blank=True)),
+                ('left_atlas_voxels', models.ManyToManyField(related_name='left_brainregions', to='pubbrain_app.AtlasPkl')),
+                ('parents', models.ManyToManyField(related_name='children', null=True, to='pubbrain_app.BrainRegion', blank=True)),
+                ('right_atlas_regions', models.ManyToManyField(related_name='right_brainregions', null=True, to='pubbrain_app.BrainRegion', blank=True)),
+                ('right_atlas_voxels', models.ManyToManyField(related_name='right_brainregions', to='pubbrain_app.AtlasPkl')),
+                ('uni_atlas_regions', models.ManyToManyField(related_name='uni_brainregions', null=True, to='pubbrain_app.BrainRegion', blank=True)),
+                ('uni_atlas_voxels', models.ManyToManyField(related_name='uni_brainregions', to='pubbrain_app.AtlasPkl')),
             ],
             options={
             },
