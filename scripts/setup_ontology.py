@@ -46,7 +46,7 @@ def updateOrAddRegion(regionName, pklDict):
     # returns region if it or a synonym already exist. if region is new, will create it with query and is_atlasregion = False
     for syn in synonyms:
         fooList=models.BrainRegion.objects.filter(name=syn)
-        print fooList
+#         print fooList
         if fooList:
             foo = fooList[0]
             break
@@ -92,21 +92,27 @@ def setupOntology(pkl):
         regionName = graph.node[node]['name']
         #remove left and right
         regionName = regionName.replace('right ', '').replace('left ', '')
-        print regionName
+
+        parents = [graph.node[x]['name'] for x in graph.predecessors_iter(node) if 'name' in graph.node[x].keys()]
+        children = [graph.node[x]['name'] for x in graph.successors_iter(node) if 'name' in graph.node[x].keys()]
+        if not parents and not children:
+            print regionName
+            continue
         
         foo = updateOrAddRegion(regionName, pklDict)
         # add parents
         # should be able to remove the if part of next line (and children) once i fix the graph
-        parents = [graph.node[x]['name'] for x in graph.predecessors_iter(node) if 'name' in graph.node[x].keys()]
+        
         for parent in parents:
+            parent = parent.replace('right ', '').replace('left ', '')
             if parent != regionName:
                 parentObj = updateOrAddRegion(parent, pklDict)
                 foo.parents.add(parentObj)
                 foo.save()
                 
         #add children
-        children = [graph.node[x]['name'] for x in graph.successors_iter(node) if 'name' in graph.node[x].keys()]
         for child in children:
+            child = child.replace('right ', '').replace('left ', '')
             if child != regionName:
                 childObj = updateOrAddRegion(child, pklDict)
                 childObj.parents.add(foo)
@@ -122,11 +128,11 @@ def parChiRecursion(region, direction, level = ''):
         matchingRelatives = []
         if direction == 'parents':
             for parent in region.parents.all():
-                print level, parent.name
+                print level, len(level), parent.name
                 matchingRelatives += parChiRecursion(parent, direction, level)
         else:
             for child in region.children.all():
-                print level, child.name
+                print level, len(level), child.name
                 matchingRelatives += parChiRecursion(child, direction, level)
         return matchingRelatives
 
@@ -204,7 +210,6 @@ def delSamePar():
         if region in region.children.all():
             region.children.remove(region)
             region.save()
-        print region
 
 def redoSyns():
     # will update the synonyms of each BrainRegion
@@ -215,15 +220,31 @@ def redoSyns():
         region.synonyms = newSynStr
         region.save()
 
+def returnLoopRegions():
+    #prints regions who has a region that is both a parent and a child. this will cause recursive loop when running addParChiSearch()
+    for region in [x for x in BrainRegion.objects.all() if x.parents.all() and x.children.all()]:
+#         print set(x.parents.all()).intersection(x.children.all())
+#         print x.parents.all()
+#         print x.children.all()
+        loopRegions = []
+        if set(region.parents.all()).intersection(region.children.all()):
+            loopRegions.append(region)
+            print region.name
+        return loopRegions
+        
+
 # addAtlasPkls()
 # setupOntology("NIFgraph.pkl")
 # setupOntology("uberongraph.pkl")
+# setupOntology("FMAgraph.pkl")
 
 # manualChanges()
-# addParChiSearch()
-
-
 # delSamePar()
+addParChiSearch()
+# returnLoopRegions()
+
+
+
 # delSynRegions()
 
 # printSynRegions()

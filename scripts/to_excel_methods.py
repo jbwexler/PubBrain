@@ -39,15 +39,35 @@ def mappedAtlasRegions(outputFile):
     
     count = 0
     for object in AtlasPkl.objects.all():
-        if object.BrainRegions.all():
-            for BrainRegion in object.BrainRegions.all():
-                sheet1.write(count,0, object.atlas)
-                sheet1.write(count,1, object.name)
-                sheet1.write(count,2, BrainRegion.name)
-                count += 1
+        if object.uni_brainregions.all() or object.left_brainregions.all() or object.right_brainregions.all():
+            if object.uni_brainregions.all():
+                for BrainRegion in object.uni_brainregions.all():
+                    sheet1.write(count,0, object.atlas)
+                    sheet1.write(count,1, object.name)
+                    sheet1.write(count,2, object.side)
+                    sheet1.write(count,3, BrainRegion.name)
+                    sheet1.write(count,4, 'unilateral')
+                    count += 1
+            elif object.left_brainregions.all():
+                for BrainRegion in object.left_brainregions.all():
+                    sheet1.write(count,0, object.atlas)
+                    sheet1.write(count,1, object.name)
+                    sheet1.write(count,2, object.side)
+                    sheet1.write(count,3, BrainRegion.name)
+                    sheet1.write(count,4, 'left')
+                    count += 1
+            else:
+                for BrainRegion in object.right_brainregions.all():
+                    sheet1.write(count,0, object.atlas)
+                    sheet1.write(count,1, object.name)
+                    sheet1.write(count,2, object.side)
+                    sheet1.write(count,3, BrainRegion.name)
+                    sheet1.write(count,4, 'right')
+                    count += 1
         else:
             sheet1.write(count,0, object.atlas)
             sheet1.write(count,1, object.name)
+            sheet1.write(count,2, object.side)
             count += 1
             
     excel.save(outputFile)  
@@ -55,4 +75,4 @@ def mappedAtlasRegions(outputFile):
 
 #mapOntReverse('/Users/jbwexler/poldrack_lab/cs/other/mappings7.xls')
 
-mappedAtlasRegions('/Users/jbwexler/poldrack_lab/cs/other/atlasmappings2.xls')
+mappedAtlasRegions('/Users/jbwexler/poldrack_lab/cs/other/atlasmappings4.xls')

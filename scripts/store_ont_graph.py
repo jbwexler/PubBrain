@@ -101,7 +101,7 @@ def storeNIFAsGraph(owlPath = 'http://ontology.neuinfo.org/NIF/BiomaterialEntiti
     with open(os.path.join(pklDir, pklFile),'wb') as output:
         pickle.dump(netx, output, -1)
         
-def storeOntAsGraph(owlPath = 'http://berkeleybop.org/ontologies/uberon.owl', pklFile = 'uberongraph.pkl', pklDir = ''):
+def storeUberonAsGraph(owlPath = 'http://berkeleybop.org/ontologies/uberon.owl', pklFile = 'uberongraph.pkl', pklDir = ''):
     t = timeit.Timer
     g = rdflib.Graph()
     g.load(owlPath)
@@ -156,7 +156,11 @@ def storeOntAsGraph(owlPath = 'http://berkeleybop.org/ontologies/uberon.owl', pk
         node = str(x.stringregion).lower()
         parent = str(x.stringparent).lower()
         parent_name = str(x.stringparlabel).lower()
-        netx.add_node(parent, {'name':parent_name})
+        try:
+            if not [n for n in netx if netx.node[n]['name'] == parent_name]:
+                netx.add_node(parent, {'name':parent_name})
+        except:
+            netx.add_node(parent, {'name':parent_name})
         netx.add_edge(parent, node)    
     
      
@@ -196,7 +200,7 @@ def storeFMAasGraph(owlPath = '/Users/jbwexler/Downloads/fma.owl', pklFile = 'FM
                 PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
                 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
                 PREFIX fma: <http://purl.org/sig/ont/fma/>
-                SELECT ?region ?parent
+                SELECT ?region ?parent ?parentlabel
                 WHERE { 
                 ?region rdfs:subClassOf+ ?head.
                 {?head fma:preferred_name "Segment of brain"^^<http://www.w3.org/2001/XMLSchema#string>}
@@ -205,6 +209,7 @@ def storeFMAasGraph(owlPath = '/Users/jbwexler/Downloads/fma.owl', pklFile = 'FM
                 {?restrictionPar owl:onProperty fma:regional_part_of}
                 UNION  {?restrictionPar owl:onProperty fma:constitutional_part_of}
                 ?restrictionPar owl:someValuesFrom ?parent.
+                ?parent rdfs:label ?parentlabel.
                  }
                 """)
       
@@ -216,7 +221,7 @@ def storeFMAasGraph(owlPath = '/Users/jbwexler/Downloads/fma.owl', pklFile = 'FM
                 PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
                 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
                 PREFIX fma: <http://purl.org/sig/ont/fma/>
-                SELECT ?region ?child
+                SELECT ?region ?child ?childlabel
                 WHERE { 
                 ?region rdfs:subClassOf+ ?head.
                 {?head fma:preferred_name "Segment of brain"^^<http://www.w3.org/2001/XMLSchema#string>}
@@ -225,6 +230,7 @@ def storeFMAasGraph(owlPath = '/Users/jbwexler/Downloads/fma.owl', pklFile = 'FM
                 {?restrictionChi owl:onProperty fma:regional_part}
                 UNION  {?restrictionChi owl:onProperty fma:constitutional_part}
                 ?restrictionChi owl:someValuesFrom ?child.
+                ?child rdfs:label ?childlabel.
                  }
                  """)
     
@@ -240,6 +246,12 @@ def storeFMAasGraph(owlPath = '/Users/jbwexler/Downloads/fma.owl', pklFile = 'FM
         print 'parents', node
         node = str(x.region).lower()
         parent = str(x.parent).lower()
+        parent_name = str(x.parentlabel).lower()
+        try:
+            if not [n for n in netx if netx.node[n]['name'] == parent_name]:
+                netx.add_node(parent, {'name':parent_name})
+        except:
+            netx.add_node(parent, {'name':parent_name})
         netx.add_edge(parent, node)    
     
     # adding edges for all pairs found from childQuery
@@ -247,10 +259,17 @@ def storeFMAasGraph(owlPath = '/Users/jbwexler/Downloads/fma.owl', pklFile = 'FM
         print 'children', node
         node = str(x.region).lower()
         child = str(x.child).lower()
+        child_name = str(x.childlabel).lower()
+        try:
+            if not [n for n in netx if netx.node[n]['name'] == child_name]:
+                netx.add_node(child, {'name':child_name})
+        except:
+            netx.add_node(child, {'name':child_name})
         netx.add_edge(node, child)    
      
     with open(os.path.join(pklDir, pklFile),'wb') as output:
         pickle.dump(netx, output, -1)
 
 
-
+# storeUberonAsGraph()
+storeFMAasGraph()

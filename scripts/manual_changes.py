@@ -73,7 +73,7 @@ def manualChanges():
         
     # keys are BrainRegion names and values are children to remove
     print 'childRem:'
-    childRem = {'olfactory bulb': 'olfactory lobe'}
+    childRem = {'olfactory bulb': 'olfactory lobe', 'core auditory cortex':'auditory cortex','cerebral hemisphere':'cerebral cortex','body of hippocampus':'hippocampus'}
     for region, child in childRem.items():
         try:
             object = BrainRegion.objects.get(name=region)
