@@ -1,17 +1,17 @@
 """
-script to set up toy example
+script to set up ontology
 """
 
 
 import django
 import cPickle as pickle
-from expand_syn import getSynonyms
+from scripts.expand_syn import getSynonyms
 import os
 from nltk.sem.chat80 import region
 from pip._vendor.distlib._backport.tarfile import TUREAD
-from manual_changes import *
+from scripts.manual_changes import *
 from pubbrain_app.models import *
-import manual_changes
+import scripts.manual_changes
 django.setup()
 
 from pubbrain_app import models
@@ -121,7 +121,7 @@ def setupOntology(pkl):
         
 def parChiRecursion(region, direction, level = ''):
     level += '_'
-    if region.is_atlasregion == True and region.name not in manual_changes.tooBig:
+    if region.is_atlasregion == True and region.name not in tooBig:
         print '!!!!match!!!!'
         return [region]
     else:
@@ -233,20 +233,23 @@ def returnLoopRegions():
         return loopRegions
         
 
-# addAtlasPkls()
-# setupOntology("NIFgraph.pkl")
-# setupOntology("uberongraph.pkl")
-# setupOntology("FMAgraph.pkl")
-
+def freshStart():
+    #performs all steps necessary to setup ontology when creating a fresh databse
+    addAtlasPkls()
+    setupOntology("NIFgraph.pkl")
+    setupOntology("uberongraph.pkl")
+    setupOntology("FMAgraph.pkl")
+    manualChanges()
+    delSynRegions()
+    delSamePar()
+    addParChiSearch()
+    
+# freshStart()
 # manualChanges()
-# delSamePar()
-addParChiSearch()
 # returnLoopRegions()
-
-
-
 # delSynRegions()
-
+# delSamePar()
 # printSynRegions()
+addParChiSearch()
 
 

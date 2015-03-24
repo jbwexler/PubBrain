@@ -49,7 +49,7 @@ def manualChanges():
     atlasRegAdd = {}
     
     # list of names of BrainRegion objects to remove
-    regionRem = ['brain', 'white matter', 'matrix compartment', 'nucleus of cns', ]
+    regionRem = ['brain', 'white matter', 'matrix compartment', 'nucleus of cns' ]
     print 'regionRem: '
     for region in regionRem:
         try:

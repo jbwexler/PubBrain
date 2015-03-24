@@ -32,12 +32,10 @@ class Migration(migrations.Migration):
                 ('is_atlasregion', models.BooleanField(default=False)),
                 ('synonyms', models.TextField(null=True, blank=True)),
                 ('last_indexed', models.DateField(null=True, blank=True)),
-                ('left_atlas_regions', models.ManyToManyField(related_name='left_brainregions', null=True, to='pubbrain_app.BrainRegion', blank=True)),
+                ('atlasregions', models.ManyToManyField(to='pubbrain_app.BrainRegion', null=True, blank=True)),
                 ('left_atlas_voxels', models.ManyToManyField(related_name='left_brainregions', to='pubbrain_app.AtlasPkl')),
                 ('parents', models.ManyToManyField(related_name='children', null=True, to='pubbrain_app.BrainRegion', blank=True)),
-                ('right_atlas_regions', models.ManyToManyField(related_name='right_brainregions', null=True, to='pubbrain_app.BrainRegion', blank=True)),
                 ('right_atlas_voxels', models.ManyToManyField(related_name='right_brainregions', to='pubbrain_app.AtlasPkl')),
-                ('uni_atlas_regions', models.ManyToManyField(related_name='uni_brainregions', null=True, to='pubbrain_app.BrainRegion', blank=True)),
                 ('uni_atlas_voxels', models.ManyToManyField(related_name='uni_brainregions', to='pubbrain_app.AtlasPkl')),
             ],
             options={
@@ -47,10 +45,14 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Pmid',
             fields=[
-                ('pubmed_id', models.IntegerField(max_length=20, serialize=False, primary_key=True, db_index=True)),
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('pubmed_id', models.IntegerField(max_length=20, db_index=True)),
                 ('date_added', models.DateField(auto_now=True, auto_now_add=True)),
                 ('title', models.CharField(default=b'', max_length=255)),
-                ('brain_regions_named', models.ManyToManyField(to='pubbrain_app.BrainRegion')),
+                ('abstract', models.CharField(default=b'', max_length=10000)),
+                ('left_brain_regions', models.ManyToManyField(related_name='left_pmids', null=True, to='pubbrain_app.BrainRegion', blank=True)),
+                ('right_brain_regions', models.ManyToManyField(related_name='right_pmids', null=True, to='pubbrain_app.BrainRegion', blank=True)),
+                ('uni_brain_regions', models.ManyToManyField(related_name='uni_pmids', null=True, to='pubbrain_app.BrainRegion', blank=True)),
             ],
             options={
             },
