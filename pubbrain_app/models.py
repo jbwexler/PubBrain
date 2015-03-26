@@ -3,18 +3,14 @@ from django.db import models
 
 # represents an atlas region
 class AtlasPkl(models.Model):
-    side_choices = (
-    ('left', 'left'),
-    ('right', 'right'),
-    ('unilateral', 'unilateral'))
-    
     name=models.TextField(max_length=1000)
     atlas=models.TextField(max_length=1000, blank=True, null=True)
-    pkl=models.TextField(max_length=1000, blank=True, null=True)
-    side=models.TextField(max_length=1000, choices=side_choices, null=True, blank=True)
+    uni_pkl=models.TextField(max_length=1000, blank=True, null=True)
+    left_pkl=models.TextField(max_length=1000, blank=True, null=True)
+    right_pkl=models.TextField(max_length=1000, blank=True, null=True)
     @classmethod
-    def create(cls, pkl):
-        entry = cls(pkl=pkl)
+    def create(cls, name):
+        entry = cls(name=name)
         return entry
 
 # represents a brain region from the ontology   
@@ -30,9 +26,7 @@ class BrainRegion(models.Model):
     is_atlasregion=models.BooleanField(default=False)
     
     # if so, save the voxels associated with the region (as a cPickle)
-    uni_atlas_voxels=models.ManyToManyField(AtlasPkl, related_name='uni_brainregions')
-    left_atlas_voxels=models.ManyToManyField(AtlasPkl, related_name='left_brainregions')
-    right_atlas_voxels=models.ManyToManyField(AtlasPkl, related_name='right_brainregions')
+    atlas_voxels=models.ManyToManyField(AtlasPkl, related_name='brainregions')
     
     synonyms=models.TextField(blank=True, null=True)
     # parent-child relations in the partonomy

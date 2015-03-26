@@ -86,3 +86,7 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 IMAGE_DIR='/Users/poldrack/code/PubBrain/pubbrain_app/static/images'
+
+FIXTURE_DIRS = (
+   'pubbrain_app/fixtures/',
+)

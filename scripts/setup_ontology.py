@@ -22,23 +22,12 @@ def compareNames(ontName, pklDict):
     ontRegSet = set(ontName.split(' '))
     voxels = []
     
-    for object, words in pklDict.items():
+    for name, words in pklDict.items():
         if words == ontRegSet:
-            voxels.append(object)
+            voxels.append(name)
 
     return voxels
-
-def decodeVoxelPkls():
-    # creates a dictionary with keys as relative pkl paths and values as sets of words corresponding to the region name
-    pklDict = {}
-    removeSet = set(['wm', 'gm', 'division', 'l', 'r', 'right', 'left'])
-    for object in AtlasPkl.objects.all():
-        atlasReg = str(object.name)
-        atlasReg = filter(lambda x: str.isalnum(x) or str.isspace(x), atlasReg)
-        atlasRegSet = set(atlasReg.split(' '))
-        atlasRegSet.difference_update(removeSet)
-        pklDict[object] = atlasRegSet
-    return pklDict     
+   
                 
 def updateOrAddRegion(regionName, pklDict):
     synonyms = getSynonyms(regionName)
@@ -67,13 +56,10 @@ def updateOrAddRegion(regionName, pklDict):
     # will then add/update atlasregions, atlas_voxels, is_atlasregion and synonyms
     if atlas_voxels:
         foo.atlasregions.add(foo)
-        for object in atlas_voxels:
-            if object.side == 'left':
-                foo.left_atlas_voxels.add(object)
-            elif object.side == 'right':
-                foo.right_atlas_voxels.add(object)
-            else:
-                foo.uni_atlas_voxels.add(object)
+        for atlasPklName in atlas_voxels:
+            objectSet = AtlasPkl.objects.filter(name=atlasPklName)
+            for object in objectSet:
+                foo.atlas_voxels.add(object)
         foo.is_atlasregion=True
     if synonyms:
         foo.synonyms = "$".join(synonyms)
@@ -85,7 +71,9 @@ def setupOntology(pkl):
     with open(pkl,'rb') as inputFile:
         graph = pickle.load(inputFile)
     
-    pklDict = decodeVoxelPkls()
+    pklList = [x.values()[0] for x in AtlasPkl.objects.all().values('name')]
+    pklDict = {x:set(x.split(' ')) for x in pklList}
+
     for node in graph:
         if 'name' not in graph.node[node].keys():
             continue
@@ -147,7 +135,7 @@ def addParChiSearch():
         region.save()
         for match in matches:
             region.atlasregions.add(match)
-            
+
 def addAtlasPkls():
     # adds an AtlasPkl object for each .pkl file in the voxels dir
     for folder in os.listdir('pickle_files/voxels/'):
@@ -155,21 +143,30 @@ def addAtlasPkls():
             for fileName in os.listdir(os.path.join('pickle_files/voxels/', folder)):
                 pkl = os.path.join(folder,fileName)
                 atlas = folder.replace('_', ' ')
-                name = fileName.replace('_', ' ').replace('.pkl', '')
+                
+                #clean up the name
+                actualName = fileName.replace('_', ' ').replace('.pkl', '')
+                actualSplit = actualName.split(' ')
+                removeList = ['wm', 'gm', 'division', 'l', 'r', 'right', 'left']
+                split = [x for x in actualSplit if x not in removeList]
+                name = ' '.join(split)
+                name = filter(lambda x: str.isalnum(x) or str.isspace(x), name)
+                
                 print pkl, atlas, name
                 try:
-                    AtlasPkl.objects.get(pkl=pkl)
+                    foo = AtlasPkl.objects.get(name=name, atlas=atlas)
+                    print 'using exist'
                 except:
-                    foo = AtlasPkl.create(pkl)
+                    foo = AtlasPkl.create(name)
+                    print 'creating new'
                 foo.atlas = atlas
-                foo.name = name
-                split = name.split(' ')
-                if 'l' in split or 'left' in split:
-                    foo.side = 'left'
-                elif 'r' in split or 'right' in split:
-                    foo.side = 'right'
+                
+                if 'l' in actualSplit or 'left' in actualSplit:
+                    foo.left_pkl = pkl
+                elif 'r' in actualSplit or 'right' in actualSplit:
+                    foo.right_pkl = pkl
                 else:
-                    foo.side = 'unilateral'
+                    foo.uni_pkl = pkl
                 foo.save()
 
 def printSynRegions():
@@ -188,18 +185,19 @@ def printSynRegions():
         if len(fil) > 1:
             print [x.name for x in fil]
     
-def delSynRegions():
-    # deletes regions that who are a synonym of another region (presumably only an issue w/ multiple ontologies). note: the updated setupOntology()
-    # function will prevent synonym regions from being created so this function won't be necessary for now on
-    for region in BrainRegion.objects.exclude(synonyms=None):
-        synonyms = region.synonyms.split("$")
-        synonyms.remove(region.name)
-        for syn in synonyms:
-            if BrainRegion.objects.filter(name=syn):
-                region.delete()
-                region.save()
-                print syn
-                print "deleted: %s" %region.name
+# def delSynRegions():
+#     # deletes regions that who are a synonym of another region (presumably only an issue w/ multiple ontologies). note: the updated setupOntology()
+#     # function will prevent synonym regions from being created so this function won't be necessary for now on
+#     # update: 
+#     for region in BrainRegion.objects.exclude(synonyms=None):
+#         synonyms = region.synonyms.split("$")
+#         synonyms.remove(region.name)
+#         for syn in synonyms:
+#             if BrainRegion.objects.filter(name=syn):
+#                 region.delete()
+#                 region.save()
+#                 print syn
+#                 print "deleted: %s" %region.name
                 
 def delSamePar():
     #removes self-parent and self-child relationships
@@ -234,22 +232,22 @@ def returnLoopRegions():
         
 
 def freshStart():
-    #performs all steps necessary to setup ontology when creating a fresh databse
+    #performs all steps necessary to setup ontology when creating a fresh database
     addAtlasPkls()
     setupOntology("NIFgraph.pkl")
     setupOntology("uberongraph.pkl")
     setupOntology("FMAgraph.pkl")
     manualChanges()
-    delSynRegions()
     delSamePar()
     addParChiSearch()
     
-# freshStart()
+freshStart()
+# addAtlasPkls()
 # manualChanges()
 # returnLoopRegions()
 # delSynRegions()
 # delSamePar()
 # printSynRegions()
-addParChiSearch()
+# addParChiSearch()
 
 
