@@ -1,0 +1,6 @@
+django
+django-extentions
+MySQL-python
+biopython
+nibabel
+python-profiler

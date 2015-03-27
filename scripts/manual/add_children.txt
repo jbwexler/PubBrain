@@ -1,0 +1,41 @@
+BrainRegion		Child
+
+splenium of corpus callosum	corpus callosum
+superior frontooccipital fasciculus could be a part	of anterior internal capsule	anterior capsule
+tapetum	corpus callosum
+inferior parietal lobule pga	brodmann area 39 of angular gyrus
+inferior parietal lobule pgp	brodmann area 39 of angular gyrus
+inferior parietal lobule pf	brodmann area 40 of supramarginal gyrus
+inferior parietal lobule pfcm	brodmann area 40 of supramarginal gyrus
+inferior parietal lobule pfm	brodmann area 40 of supramarginal gyrus
+inferior parietal lobule pfop	brodmann area 40 of supramarginal gyrus
+inferior parietal lobule pft	brodmann area 40 of supramarginal gyrus
+body of corpus callosum	corpus callosum
+visual cortex v3v	extrastriate cortex
+visual cortex v4	extrastriate cortex
+visual cortex v5	extrastriate cortex
+insula id1	gray matter of posterior long insular gyrus
+insula ig1	gray matter of posterior long insular gyrus
+insula ig2	gray matter of posterior long insular gyrus
+primary auditory cortex te10	primary auditory cortex
+primary auditory cortex te11	primary auditory cortex
+primary auditory cortex te12	primary auditory cortex
+primary motor cortex ba4a	primary motor cortex
+primary motor cortex ba4p	primary motor cortex
+primary somatosensory cortex ba1	primary somatosensory cortex
+primary somatosensory cortex ba2	primary somatosensory cortex
+primary somatosensory cortex ba3a	primary somatosensory cortex
+primary somatosensory cortex ba3b	primary somatosensory cortex
+visual cortex v1 ba17	primary visual cortex
+secondary somatosensory cortex parietal operculum op1	secondary somatosensory cortex
+secondary somatosensory cortex parietal operculum op2	secondary somatosensory cortex
+secondary somatosensory cortex parietal operculum op3	secondary somatosensory cortex
+secondary somatosensory cortex parietal operculum op4	secondary somatosensory cortex
+visual cortex v2 ba18	secondary visual cortex
+superior parietal lobule 5ci	superior parietal cortex
+superior parietal lobule 5l	superior parietal cortex
+superior parietal lobule 5m	superior parietal cortex
+superior parietal lobule 7a	superior parietal cortex
+superior parietal lobule 7m	superior parietal cortex
+superior parietal lobule 7p	superior parietal cortex
+superior parietal lobule 7pc	superior parietal cortex

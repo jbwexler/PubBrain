@@ -57,7 +57,7 @@ class Pmid(models.Model):
     uni_brain_regions=models.ManyToManyField(BrainRegion, null=True, blank=True, related_name='uni_pmids')
     left_brain_regions=models.ManyToManyField(BrainRegion, null=True, blank=True, related_name='left_pmids')
     right_brain_regions=models.ManyToManyField(BrainRegion, null=True, blank=True, related_name='right_pmids')
-    title=models.CharField(max_length=255,default='')
+    title=models.CharField(max_length=1000,default='')
     abstract = models.CharField(max_length=10000, default='')
     
     @classmethod

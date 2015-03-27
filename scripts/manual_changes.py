@@ -6,6 +6,10 @@ from pubbrain_app.models import BrainRegion, AtlasPkl
 import os.path
 import pubbrain_app
 import PubBrain
+from scripts import manual
+from scripts.update_or_add_region import *
+
+
 
 def tooBigList():
     pklDir = os.path.join(os.path.dirname(PubBrain), 'scripts/pickle_files/voxels')
@@ -16,20 +20,33 @@ def tooBigList():
 # list of atlasRegions who have to many voxels and thus are not useful to map to through par/chi relations
 tooBig = ['cerebral cortex']
 
+def convertToList(filename):
+    manualDir = manual.__path__[0]
+    with open(os.path.join(manualDir, filename)) as fin:
+        rows = [ line.split('\t') for line in fin ]
+        d = { row[0]:row[1].replace('\n','') for row in rows[2:] }
+    return d
+        
 def manualChanges():
     # keys are BrainRegion names and values are synonyms to be added
-    synAdd = {}
+    
+    pklDict = makePklDict()
+    
+    synAdd = convertToList('add_synonyms.txt')
+    print synAdd
     print 'synAdd:'
     for region, syn in synAdd.items():
         try:
-            object = BrainRegion.objects.get(name=region)
-            synonyms = object.synonyms.split('$')
-            synonyms.append(syn)
-            object.synonyms = "$".join(synonyms)
-            object.save()
+            queryset = BrainRegion.objects.filter(synonyms__contains=region).all()
+            for object in queryset:
+                synonyms = set(object.synonyms.split('$'))
+                if region in synonyms:
+                    synonyms.add(syn)
+                    object.synonyms = "$".join(list(synonyms))
+                    object.save()
         except Exception,e: print region, str(e)
         else:
-            print 'added:, ', region, syn
+            print 'added: %s as a a synonym of: %s ' %(syn, region)
     print
     # keys are BrainRegion names and values are synonyms to be removed
     synRem = {'dorsal supraoptic decussation':'dorsal', 'ventral supraoptic decussation':'ventral', 'ca2 field of hippocampus':'ca2'}
@@ -60,15 +77,18 @@ def manualChanges():
             print 'removed: ', region
     print 
     # keys are BrainRegion names and values are children to Add
-    childAdd = {}
     
-    for region, child in childAdd.items():
+    print 'childAdd: '
+    childAdd = convertToList('add_children.txt')
+    for child, parent in childAdd.items():
         try:
-            object = BrainRegion.objects.get(name=region)
-            childObj = BrainRegion.objects.get(name=child)
-            object.children.add(childObj)
-            object.save()
-        except Exception,e: print region, str(e)
+            childObj = updateOrAddRegion(child, pklDict)
+            parentObj = updateOrAddRegion(parent, pklDict)
+            parentObj.children.add(childObj)
+            parentObj.save()
+        except Exception,e: print child, parent, str(e)
+        else:
+            print 'added: %s as a child of: %s ' %(child, parent)
         
         
     # keys are BrainRegion names and values are children to remove
@@ -103,7 +123,8 @@ def manualChanges():
             object.parents.remove(parentObj)
             object.save()
         except Exception,e: print region, str(e)
-        
+
+# manualChanges()    
     
         
         

@@ -63,7 +63,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'pubbrain_dev',
 	'USER': 'root',
-	'PASSWORD':'fR3oFk0W',
+	'PASSWORD':'hungry',
     }
 }
 

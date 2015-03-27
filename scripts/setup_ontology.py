@@ -9,91 +9,41 @@ from scripts.expand_syn import getSynonyms
 import os
 from nltk.sem.chat80 import region
 from pip._vendor.distlib._backport.tarfile import TUREAD
-from scripts.manual_changes import *
+from scripts.manual_changes import manualChanges, tooBig
 from pubbrain_app.models import *
 import scripts.manual_changes
+from scripts.update_or_add_region import *
 django.setup()
 
 from pubbrain_app import models
 
-def compareNames(ontName, pklDict):
-    # compares an ont region with all the pkl sets in the pklDict. returns a list of relative pkl paths of matching atlas regions
-    ontName = filter(lambda x: str.isalnum(x) or str.isspace(x), ontName)
-    ontRegSet = set(ontName.split(' '))
-    voxels = []
-    
-    for name, words in pklDict.items():
-        if words == ontRegSet:
-            voxels.append(name)
 
-    return voxels
-   
-                
-def updateOrAddRegion(regionName, pklDict):
-    synonyms = getSynonyms(regionName)
-    
-    # returns region if it or a synonym already exist. if region is new, will create it with query and is_atlasregion = False
-    for syn in synonyms:
-        fooList=models.BrainRegion.objects.filter(name=syn)
-#         print fooList
-        if fooList:
-            foo = fooList[0]
-            break
-    else:
-        'adding new'
-        foo=models.BrainRegion.create(regionName)
-        foo.query='"' + regionName + '"[tiab]'
-        foo.is_atlasregion=False
-        foo.save()
-    
-    # adds matching 
-    atlas_voxels = []
-
-    for region in synonyms:
-        atlas_voxels += compareNames(region, pklDict) 
-
-
-    # will then add/update atlasregions, atlas_voxels, is_atlasregion and synonyms
-    if atlas_voxels:
-        foo.atlasregions.add(foo)
-        for atlasPklName in atlas_voxels:
-            objectSet = AtlasPkl.objects.filter(name=atlasPklName)
-            for object in objectSet:
-                foo.atlas_voxels.add(object)
-        foo.is_atlasregion=True
-    if synonyms:
-        foo.synonyms = "$".join(synonyms)
-    foo.save()
-    return foo
-                
 def setupOntology(pkl):
     #takes a netx graph and adds each node. adds the following fields if applicable: synonyms, is_atlasregion, atlas_voxels, query, atlasregions
     with open(pkl,'rb') as inputFile:
         graph = pickle.load(inputFile)
     
-    pklList = [x.values()[0] for x in AtlasPkl.objects.all().values('name')]
-    pklDict = {x:set(x.split(' ')) for x in pklList}
+    pklDict = makePklDict()
 
     for node in graph:
         if 'name' not in graph.node[node].keys():
             continue
-        regionName = graph.node[node]['name']
+        syn = graph.node[node]['name']
         #remove left and right
-        regionName = regionName.replace('right ', '').replace('left ', '')
+        syn = syn.replace('right ', '').replace('left ', '')
 
         parents = [graph.node[x]['name'] for x in graph.predecessors_iter(node) if 'name' in graph.node[x].keys()]
         children = [graph.node[x]['name'] for x in graph.successors_iter(node) if 'name' in graph.node[x].keys()]
         if not parents and not children:
-            print regionName
             continue
         
-        foo = updateOrAddRegion(regionName, pklDict)
+        foo = updateOrAddRegion(syn, pklDict)
         # add parents
         # should be able to remove the if part of next line (and children) once i fix the graph
         
         for parent in parents:
             parent = parent.replace('right ', '').replace('left ', '')
-            if parent != regionName:
+            if parent != syn:
                 parentObj = updateOrAddRegion(parent, pklDict)
                 foo.parents.add(parentObj)
                 foo.save()
@@ -101,7 +51,7 @@ def setupOntology(pkl):
         #add children
         for child in children:
             child = child.replace('right ', '').replace('left ', '')
-            if child != regionName:
+            if child != syn:
                 childObj = updateOrAddRegion(child, pklDict)
                 childObj.parents.add(foo)
                 childObj.save()
@@ -229,10 +179,29 @@ def returnLoopRegions():
             loopRegions.append(region)
             print region.name
         return loopRegions
+
+def updateAtlasMappings():
+    pklDict = makePklDict()
+    for region in BrainRegion.objects.all():
+        synonyms = region.synonyms.split('$')
+        print region
+        atlas_voxels = []
+        for syn in synonyms:
+            atlas_voxels += compareNames(str(syn), pklDict) 
+        
+        if atlas_voxels:
+            region.atlasregions.add(region)
+            for atlasPklName in atlas_voxels:
+                objectSet = AtlasPkl.objects.filter(name=atlasPklName)
+                for object in objectSet:
+                    region.atlas_voxels.add(object)
+            region.is_atlasregion=True
+        region.save()
         
 
 def freshStart():
-    #performs all steps necessary to setup ontology when creating a fresh database
+    #performs all steps necessary to setup ontology when creating a fresh database. the order of the ontology graphs is important
+    #to keep the BrainRegion names the same as before
     addAtlasPkls()
     setupOntology("NIFgraph.pkl")
     setupOntology("uberongraph.pkl")
@@ -241,13 +210,13 @@ def freshStart():
     delSamePar()
     addParChiSearch()
     
-freshStart()
+# freshStart()
 # addAtlasPkls()
 # manualChanges()
 # returnLoopRegions()
 # delSynRegions()
 # delSamePar()
 # printSynRegions()
-# addParChiSearch()
-
+addParChiSearch()
+# updateAtlasMappings()
 

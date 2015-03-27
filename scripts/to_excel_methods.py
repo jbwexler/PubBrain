@@ -55,4 +55,4 @@ def mappedAtlasRegions(outputFile):
 
 #mapOntReverse('/Users/jbwexler/poldrack_lab/cs/other/mappings7.xls')
 
-mappedAtlasRegions('/Users/jbwexler/poldrack_lab/cs/other/atlasmappings5.xls')
+mappedAtlasRegions('/Users/jbwexler/cs/poldracklab/other/atlasmappings5.xls')

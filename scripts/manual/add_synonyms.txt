@@ -1,0 +1,36 @@
+BrainRegion		Synonym
+
+anterior part of middle temporal gyrus	middle temporal gyrus anterior
+posterior part of middle temporal gyrus	middle temporal gyrus posterior
+polar part of middle temporal gyrus	middle temporal gyrus temporooccipital part
+anterior part of inferior temporal gyrus	inferior temporal gyrus anterior
+anterior part of superior temporal gyrus	superior temporal gyrus anterior
+anterior part of supramarginal gyrus	supramarginal gyrus anterior
+anterior temporal fusiform gyrus	temporal fusiform cortex anterior
+basolateral nuclear complex	amygdala laterobasal group
+body of corpus callosum	callosal body
+caudate nucleus	caudate
+cuneus cortex	cuneal cortex
+dentate gyrus of hippocampus	hippocampus dentate gyrus
+entorhinal cortex	hippocampus entorhinal cortex
+fornix	fornix column and body of fornix
+frontal operculum	frontal operculum cortex
+lateral ventricle	lateral ventrical
+nucleus accumbens	accumbens
+opercular part of inferior frontal gyrus	brocas area ba44
+operculum of the brain	central opercular cortex
+orbital part of inferior frontal gyrus	inferior frontal gyrus pars opercularis
+parietal operculum	parietal operculum cortex
+posterior part of inferior temporal gyrus	inferior temporal gyrus posterior
+posterior part of superior temporal gyrus	superior temporal gyrus posterior
+posterior part of supramarginal gyrus	supramarginal gyrus posterior
+posterior temporal fusiform gyrus	temporal fusiform cortex posterior
+precuneus cortex	precuneous cortex
+premotor cortex	premotor cortex ba6
+stria terminalis	fornix cres stria terminalis can not be resolved with current resolution
+subcallosal area	subcallosal cortex
+subiculum	hippocampus subiculum
+supplemental motor cortex	juxtapositional lobule cortex formerly supplementary motor cortex
+triangular part of inferior frontal gyrus	inferior frontal gyrus pars triangularis
+triangular part of inferior frontal gyrus	brocas area ba45
+uncinate fasciculus	uncinate fascicle
