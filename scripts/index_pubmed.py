@@ -9,43 +9,29 @@ from django.db.transaction import set_autocommit, get_autocommit
 Entrez.email='poldrack@stanford.edu'
 import datetime
 import profile
-import unicodedata
 import django
 django.setup()
 from pubbrain_app.models import *
 from django.db import transaction
 from django.db.models import Q
+import time
+import datetime
 
-
-def addOrGetPmid(id, syn):
-    # returns Pmid object matching id. if no object exists, creates a new object and adds the abstract and title
-    items=Pmid.objects.filter(pubmed_id=id)
-    if not items.exists():
-        entry=Pmid.create(id)
-        for i in range(3):
-            try:
-                handle=Entrez.efetch(db='pubmed',id=id,retmax=100000,retmode='xml',rettype='abstract')
-                abstractRecord = Entrez.read(handle)
-                break
-            except:
-                print 'retry'
-                pass
-        else:
-            print syn, ": could not get abstract/title"
-
-        try:
-            abstract=abstractRecord[0]['MedlineCitation']['Article']['Abstract']['AbstractText'][0]
-            entry.abstract = abstract.encode('ascii', 'ignore')
-        except:
-            pass
-        try:
-            title = abstractRecord[0]['MedlineCitation']['Article']['ArticleTitle']
-            entry.title = title.encode('ascii', 'ignore')
-        except:
-            pass
-        entry.save()
-    else:
-        entry=items[0]
+def addPmid(id, info):
+    entry=Pmid.create(id)
+        
+    try:
+        abstract=info['MedlineCitation']['Article']['Abstract']['AbstractText'][0]
+        entry.abstract = abstract.encode('ascii','ignore')
+    except:
+        pass
+    try:
+        title = info['MedlineCitation']['Article']['ArticleTitle']
+        entry.title = title.encode('ascii','ignore')
+    except:
+        pass
+        
+    entry.save()
     return entry
 
 def addPmidRegion(entry, region, syn, leftSyn, rightSyn):
@@ -57,33 +43,53 @@ def addPmidRegion(entry, region, syn, leftSyn, rightSyn):
     hasRight = rightSyn in abstractTitle
 #         print abstractTitle
     if hasLeft or hasRight:
-        print abstractTitle
         if hasLeft:
-            print 'left'
             entry.left_brain_regions.add(region)
         if hasRight:
-            print 'right'
             entry.right_brain_regions.add(region)
         if syn in abstractTitle.replace(leftSyn, '').replace(rightSyn,''):
-            print 'uni'
             entry.uni_brain_regions.add(region)
     else:
         entry.uni_brain_regions.add(region)
     entry.save()
     
-def indexIdList(idList, region, syn):
+def indexIdList(idSet, region, syn, pmidSet):
     #
     set_autocommit(False)
     leftSyn = 'left ' + syn
     rightSyn = 'right ' + syn
-    pmidObjectSet = Pmid.objects.filter(Q(uni_brain_regions=region)|Q(left_brain_regions=region)|Q(right_brain_regions=region))
-    pmidSet = pmidObjectSet.values_list('pubmed_id')
-    for id in idList:
-        #print id
-        entry = addOrGetPmid(id, syn)
-        if (id) not in pmidSet:
+    
+    # ids that are in the search but not related to region in database need to be added appropriately
+    newIds = idSet.difference(pmidSet)
+    print 'new ids: ', len(newIds)
+    # ids that aren't in the database
+    existingIdsQuery = Pmid.objects.filter(pubmed_id__in=newIds)
+    existingIds = set([str(x) for (x,) in existingIdsQuery.values_list('pubmed_id')])
+#     createIds = set([x for x in newIds if not Pmid.objects.filter(pubmed_id=x)])
+    # ids that are in the database but need to be related to the region
+    createIds = newIds.difference(existingIds)
+    createIdsList = list(createIds)
+    #     print createIds, existingIds
+    print len(createIds), len(existingIds)
+    if createIdsList:
+        for i in range(5):
+            try:
+                handle=Entrez.efetch(db='pubmed',id=createIdsList,retmax=100000,retmode='xml',rettype='abstract') 
+                record = Entrez.read(handle)
+                for id, info in zip(createIdsList, record):
+                    entry = addPmid(id, info)
+                    addPmidRegion(entry, region, syn, leftSyn, rightSyn)
+                break
+            except:
+                print 'retry'
+        else:
+            print syn, ": could not get abstracts/titles" 
+            
+        
+    if existingIdsQuery:
+        for entry in existingIdsQuery:
             addPmidRegion(entry, region, syn, leftSyn, rightSyn)
-           
+    
     transaction.commit()
     set_autocommit(True)
 
@@ -93,13 +99,12 @@ def index_pubmed(force=False):
     for region in BrainRegion.objects.all():
         if region.last_indexed == None or (datetime.date.today() - region.last_indexed).days > 30 or force:
             print region.name,region.query, region.pk
-            # get list of all related pmids
-            relatedIds = region.uni_pmids.clear()
-            region.left_pmids.clear()
-            region.right_pmids.clear()
             
-
+            pmidQuerySet = Pmid.objects.filter(Q(uni_brain_regions=region)|Q(left_brain_regions=region)|Q(right_brain_regions=region))
+            pmidSet = set([str(x) for (x,) in pmidQuerySet.values_list('pubmed_id')])
+            
             for syn in region.synonyms.split("$"):
+                start_time = time.time()
                 query = '"' + syn + '"[tiab]'
                 print query
                 for i in range(3):
@@ -113,10 +118,13 @@ def index_pubmed(force=False):
                     print region, ": could not get search results"
                     errorList.append(region.name)
                 
-                idList = record['IdList']
-                print "number of ids %d"%len(idList)
+                idSet = set(record['IdList'])
+                print "number of ids %d"%len(idSet)
                 
-                indexIdList(idList, region, syn)
+                
+                
+                indexIdList(idSet, region, syn, pmidSet)
+                print("--- %s seconds ---(%s)" % (time.time() - start_time, datetime.datetime.now()))
             
             region.last_indexed=datetime.date.today()
             region.save()
@@ -124,17 +132,19 @@ def index_pubmed(force=False):
             print 'using existing results for',region.name
     print 'Errors: ', errorList
     
-# def addAbstractsAndTitles():
-#     #gets Abstracts and titles for all Pmids
-#     for region in [x for x in Pmid.objects.all() if not x.title and not x.abstract]:
-#         pass
 
 
-# profile.run('print index_pubmed(); print')
+
+# syn = 'angular gyrus'
+# region = BrainRegion.objects.get(name=syn)
+# query = '"' + syn + '"[tiab]'
+# handle=Entrez.esearch(db='pubmed',term=query,retmax=100000)
+# record = Entrez.read(handle)
+# idSet = set(record['IdList'])
+# print len(idSet)
+# def hey():
+#     handle2=Entrez.efetch(db='pubmed',id=idList,retmax=100000,retmode='xml',rettype='abstract') 
+#     record2 = Entrez.read(handle2)
+
+profile.run('print index_pubmed(); print')
     
-index_pubmed(True)
-# manual_transaction(record, BrainRegion.objects.get(name='piriform cortex'))
-# profile.run("manual_transaction(record, BrainRegion.objects.get(name='hippocampus'), ''); print")
-# profile.run("manual_transaction(record, BrainRegion.objects.get(name='piriform cortex'), ''); print")
-
-

@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models.fields.related import ManyToManyField
 
 
 # represents an atlas region
@@ -23,22 +24,36 @@ class BrainRegion(models.Model):
     query=models.CharField(max_length=255)
     
     # is this a native region in the atlas?
-    is_atlasregion=models.BooleanField(default=False)
+    has_pkl=models.BooleanField(default=False)
     
-    # if so, save the voxels associated with the region (as a cPickle)
-    atlas_voxels=models.ManyToManyField(AtlasPkl, related_name='brainregions')
+    # corresponding AtlasPkl objects, from which the pkl files can be taken
+    atlas_regions=models.ManyToManyField(AtlasPkl, related_name='brainregions')
     
+    # pkls that associated with unilateral, left or right sides, respectively
+    uni_pkls = models.CharField(max_length=500, blank=True)
+    left_pkls = models.CharField(max_length=500, blank=True)
+    right_pkls = models.CharField(max_length=500, blank=True)
+    
+    # string comprised of a '$' delimited list of synonyms
     synonyms=models.TextField(blank=True, null=True)
-    # parent-child relations in the partonomy
-    parents=models.ManyToManyField('self', null=True, blank=True, symmetrical=False, related_name='children')
     
-    # a list of the atlas areas associated with this term
-    # if is_atlasregion==True then this will be same as the name
-    # in other cases, it may refer to a single parent
-    # or to multiple children (e.g., "frontal lobe" is represented
-    # by a number of specific parts of the frontal lobe in the atlas)
-    atlasregions=models.ManyToManyField('self', null=True, blank=True,symmetrical=False)
+    # all parents
+    allParents=models.ManyToManyField('self', null=True, blank=True, symmetrical=False, related_name='allChildren')
     
+    # best parent, which will bes used in the hierarchical graph
+    parent=models.ForeignKey('self', null=True, blank=True, related_name='children')
+
+    # region(s) that best represent this region (can be itself). 
+    mapped_regions=models.ManyToManyField('self', null=True, blank=True,symmetrical=False)
+    
+    # generation level, highest on the hierarchy (has no parents) should equal 0
+    generation = models.IntegerField(null=True, blank=True)
+    
+    # name in NIF, Uberon and FMA, if present
+    # note: region from ontology may contain the words 'right' or 'left', which won't be present here
+    NIF_name = models.CharField(max_length=255, blank=True)
+    Uberon_name = models.CharField(max_length=255, blank=True)
+    FMA_name = models.CharField(max_length=255, blank=True)
     
     last_indexed=models.DateField(null=True, blank=True)
     
@@ -47,6 +62,9 @@ class BrainRegion(models.Model):
         region = cls(name=name)
         return region
 
+    def sumPmids(self):
+        sum=self.uni_pmids.all().count() + self.left_pmids.all().count() + self.right_pmids.all().count()
+        return sum
 
 # represents a PubMed ID
 
@@ -57,26 +75,39 @@ class Pmid(models.Model):
     uni_brain_regions=models.ManyToManyField(BrainRegion, null=True, blank=True, related_name='uni_pmids')
     left_brain_regions=models.ManyToManyField(BrainRegion, null=True, blank=True, related_name='left_pmids')
     right_brain_regions=models.ManyToManyField(BrainRegion, null=True, blank=True, related_name='right_pmids')
-    title=models.CharField(max_length=1000,default='')
-    abstract = models.CharField(max_length=10000, default='')
+    title=models.CharField(max_length=10000,default='')
+    abstract = models.TextField(max_length=100000, default='')
     
     @classmethod
     def create(cls, pmid):
         entry = cls(pubmed_id=pmid)
         return entry
+    
 
 
 # represents a saved search
 class PubmedSearch(models.Model):
-    date_added=models.DateField(auto_now_add=True,auto_now=True)
+    date_added=models.DateField(auto_now_add=True)
     filename=models.CharField(max_length=255) 
-    date_file_saved=models.DateField(auto_now_add=True,auto_now=True)
+    last_updated=models.DateField(blank=True, null=True)
     # the pubmed query for the region
     query=models.CharField(max_length=255)
     pubmed_ids=models.ManyToManyField(Pmid)
+    brain_regions=models.ManyToManyField(BrainRegion, null=True, blank=True, through='SearchToRegion')
     @classmethod
     def create(cls, query):
         result = cls(query=query)
         return result
 
-
+class SearchToRegion(models.Model):
+    SIDES = (
+        ('l', 'left'),
+        ('r', 'right'),
+        ('u', 'uni'),
+        ('ul', 'uni-left'),
+        ('ur', 'uni-right'),
+        )
+    pubmed_search = models.ForeignKey(PubmedSearch)
+    brain_region = models.ForeignKey(BrainRegion)
+    count = models.IntegerField(null=True, blank=True)
+    side = models.CharField(max_length=2, choices=SIDES)

@@ -1,0 +1,5 @@
+BrainRegion		Synonym
+
+dorsal supraoptic decussation	dorsal
+ventral supraoptic decussation	ventral
+ca2 field of hippocampus	ca2

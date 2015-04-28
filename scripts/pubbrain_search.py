@@ -1,7 +1,8 @@
 from Bio import Entrez
 from Bio.Entrez import efetch, read
 import pickle
-from pubbrain_app.models import BrainRegion
+from pubbrain_app.models import BrainRegion, Pmid, PubmedSearch, SearchToRegion
+from scipy.special._ufuncs import errprint
 Entrez.email='poldrack@stanford.edu'
 import datetime
 import profile
@@ -14,6 +15,8 @@ from django.db import transaction
 import numpy as np
 import nibabel as nib
 import numpy.linalg as npl
+from PubBrain.settings import BASE_DIR
+
     
 
 
@@ -24,140 +27,121 @@ def arrayToText(data):
             np.savetxt(outfile, data_slice, fmt='%-7.2f')
             outfile.write('# New slice\n')
 
-@transaction.commit_manually
-def manual_transaction(record, brainRegion):
-    for id in record['IdList']:
-        #print id
-        try:
-            entry=models.Pmid.objects.get(pubmed_id=id)
-        except:
-            entry=models.Pmid.create(id)
-            entry.save()
-            entry.brain_regions_named.add(brainRegion)
-    transaction.commit()
-
 # def visualize(voxels):
 #     mni_sform_inv = np.linalg.inv(mni_sform)
     
 
-def pklsToNifti(allFreqDict, aff):
+def pklsToNifti(searchObject, aff):
     
     sumArray = np.zeros((91,109,91))
+    querySet = searchObject.searchtoregion_set.prefetch_related('brain_region').all()
+    countDict = {}
     
-    for side, dict in allFreqDict.items():
-        for region, freq in dict.items():
-            if side == 'left':
-                try:
-                    pickles = [x.pkl for x in region.left_atlas_voxels.all]
-                except:
-                    pickles = [x.pkl for x in region.uni_atlas_voxels.all]
-
-            elif side == 'right':
-                try:
-                    pickles = [x.pkl for x in region.right_atlas_voxels.all]
-                except:
-                    pickles = [x.pkl for x in region.uni_atlas_voxels.all]
+    uniList = [x for x in querySet.filter(side='u').values_list('brain_region__mapped_regions__uni_pkls','count')]
+    leftList = [x for x in querySet.filter(side='l').values_list('brain_region__mapped_regions__left_pkls','count')]
+    rightList = [x for x in querySet.filter(side='r').values_list('brain_region__mapped_regions__right_pkls','count')]
+    uniLeftList = [x for x in querySet.filter(side='ul').values_list('brain_region__mapped_regions__uni_pkls','count')] + [x for x in querySet.filter(side='ul').values_list('brain_region__mapped_regions__left_pkls', 'count')]
+    uniRightList = [x for x in querySet.filter(side='ur').values_list('brain_region__mapped_regions__uni_pkls','count')] + [x for x in querySet.filter(side='ur').values_list('brain_region__mapped_regions__right_pkls', 'count')]
+    
+    allLists = uniList + leftList + rightList + uniLeftList + uniRightList
+    for (pkl, count) in allLists:
+        if pkl is not None and pkl != '':
+            if countDict.get(pkl) == None:
+                countDict[pkl] = int(count)
             else:
-                try:
-                    pickles = [x.pkl for x in region.uni_atlas_voxels.all]
-                except:
-                    pickles = [x.pkl for x in region.uni_atlas_voxels.all] + [x.pkl for x in region.right_atlas_voxels.all]
-                    
-                    
-            if region.atlas_voxels:
-                with open(os.path.join(os.getcwd(),'pickle_files/voxels', region.atlas_voxels),'rb') as input:
-                    voxels = pickle.load(input)
-    
-                for i in range(len(voxels[0])):
-                    XYZmm = [voxels[0][i],voxels[1][i],voxels[2][i]]
-                    XYZ = nib.affines.apply_affine(npl.inv(aff), XYZmm)
-                    sumArray[XYZ[0], XYZ[1], XYZ[2]] += freq
-                    if region.name == 'fusiform gyrus':
-                        print XYZ
-#     arrayToText(sumArray)
+                countDict[pkl] += int(count)
+        
+    for pkl, count in countDict.items():
+        with open(os.path.join(BASE_DIR,'scripts/pickle_files/atlas_region_voxels', pkl),'rb') as input:
+            voxels = pickle.load(input)
+        sumArray[voxels] += count
     img = nib.Nifti1Image(sumArray, affine=aff)
     return img
+
+def tallyBrainRegions(idList, searchObject):
+    # counts the number of instances each brain region in the results and adds these to the pubmed search object
+    uniCount, leftCount, rightCount, uniLeftCount, uniRightCount = ({} for i in range(5))
     
+    for id in idList:
+        uniLeftBrainRegions = []
+        uniRightBrainRegions = []
+        try: uniBrainRegions = [x for x in id.uni_brain_regions.all()]
+        except: uniBrainRegions = []
+        try: leftBrainRegions = [x for x in id.left_brain_regions.all()]
+        except: leftBrainRegions = []
+        try: rightBrainRegions = [x for x in id.right_brain_regions.all()]
+        except: rightBrainRegions = []
+        
+        for uni in uniBrainRegions:
+            if uni in leftBrainRegions and uni in rightBrainRegions:
+                leftBrainRegions.remove(uni)
+                rightBrainRegions.remove(uni)
+            elif uni in leftBrainRegions:
+                uniBrainRegions.remove(uni)
+                leftBrainRegions.remove(uni)
+                uniLeftBrainRegions.append(uni)
+            elif uni in rightBrainRegions:
+                uniBrainRegions.remove(uni)
+                rightBrainRegions.remove(uni)
+                uniRightBrainRegions.append(uni)
+                
+        allLists = [[uniBrainRegions,uniCount], [leftBrainRegions,leftCount], [rightBrainRegions,rightCount], [uniLeftBrainRegions,uniLeftCount], [uniRightBrainRegions,uniRightCount]]
+
+        for [l, d] in allLists:
+            if l:
+                for region in l:
+                    if d.get(region) == None:
+                        d[region] = 1
+                    else:
+                        d[region] += 1
+
+    allDicts = {'u':uniCount, 'l':leftCount, 'r':leftCount, 'ul':uniLeftCount, 'ur':uniRightCount}
+    for side, dict in allDicts.items():
+        for region, count in dict.items():
+            SearchToRegion.objects.create(brain_region=region, pubmed_search=searchObject, count=count, side=side)
+
+
 def pubbrain_search(search):
 
     try:
-        searchObject=models.PubmedSearch.objects.get(query=search)
+        searchObject=PubmedSearch.objects.get(query=search)
     except:
-        searchObject=models.PubmedSearch.create(query=search)
+        searchObject=PubmedSearch.create(search)
         searchObject.save()
-    handle=Entrez.esearch(db='pubmed',term=search,retmax=100000)
-    record = Entrez.read(handle)
-    
-    uniRegFreq = {}
-    leftRegFreq = {}
-    rightRegFreq = {}
-
-    
-    for id in record['IdList']:
-#         print id
-        try:
-            idObject = models.Pmid.objects.get(pubmed_id=id)
-        except:
-            continue
         
-        uniAtlasRegions = set([region for region in idObject.uni_brainregions.all()])
-        leftAtlasRegions = set([region for region in idObject.left_brainregions.all()])
-        rightAtlasRegions = set([region for region in idObject.right_brainregions.all()])
-
-        for region in uniAtlasRegions:
-            for isAtlasRegion in region.atlasregions.all():
-                if uniRegFreq.get(isAtlasRegion) == None:
-                    uniRegFreq[isAtlasRegion] = 1
-                else:
-                    uniRegFreq[isAtlasRegion] += 1
-                
-        for region in leftAtlasRegions:
-            for isAtlasRegion in region.atlasregions.all():
-                if leftRegFreq.get(isAtlasRegion) == None:
-                    leftRegFreq[isAtlasRegion] = 1
-                else:
-                    leftRegFreq[isAtlasRegion] += 1
-                
-        for region in rightAtlasRegions:
-            for isAtlasRegion in region.atlasregions.all():
-                if rightRegFreq.get(isAtlasRegion) == None:
-                    rightRegFreq[isAtlasRegion] = 1
-                else:
-                    rightRegFreq[isAtlasRegion] += 1
-    
-#     data = np.arange(4*4*3).reshape(4,4,3)
-#     img = nib.Nifti1Image(data, affine=np.eye(4))
-#     nib.save(img, os.path.join('/Users/jbwexler/poldrack_lab/cs/other','test4d.nii.gz'))
-    affine2mm = np.array([
-        [-2, 0, 0, 90],
-        [0, 2, 0, -126],
-        [0, 0, 2, -72],
-        [0, 0, 0, 1]])
-#     img = nib.load('/Applications/fmri_progs/fsl/data/atlases/STN/STN-maxprob-thr25-0.5mm.nii.gz')
-#     data = img.get_data()
-    
-    
-    allFreqDict = {'uni':uniRegFreq, 'left':leftRegFreq, 'right':rightRegFreq}
-    img = pklsToNifti(allFreqDict, affine2mm)
-    nib.save(img, os.path.join('/Users/jbwexler/poldrack_lab/cs/other', search + '.nii.gz'))
+    if searchObject.last_updated is None or (datetime.date.today() - searchObject.last_updated).days > 30:
+        handle=Entrez.esearch(db='pubmed',term=search,retmax=100000)
+        record = Entrez.read(handle)
+        idList = Pmid.objects.filter(pubmed_id__in=record['IdList'])
+        searchObject.pubmed_ids = idList
+        
+    #     data = np.arange(4*4*3).reshape(4,4,3)
+    #     img = nib.Nifti1Image(data, affine=np.eye(4))
+    #     nib.save(img, os.path.join('/Users/jbwexler/poldrack_lab/cs/other','test4d.nii.gz'))
+        affine2mm = np.array([
+            [-2, 0, 0, 90],
+            [0, 2, 0, -126],
+            [0, 0, 2, -72],
+            [0, 0, 0, 1]])
+    #     img = nib.load('/Applications/fmri_progs/fsl/data/atlases/STN/STN-maxprob-thr25-0.5mm.nii.gz')
+    #     data = img.get_data()
+        
+        tallyBrainRegions(idList, searchObject)
+        
+        
+        img = pklsToNifti(searchObject, affine2mm)
+        filename = os.path.join('/Users/jbwexler/cs/poldracklab/other', search +'.nii.gz')
+        nib.save(img, filename)
+        searchObject.filename = filename
+        searchObject.last_updated = datetime.date.today()
+#         searchObject.save()
+        
+        
+    return searchObject
     
 
         
  
  
-pubbrain_search('prosopagnosia')
+pubbrain_search('reward system')
 
-
-    
-#     if (brainRegion.last_indexed - datetime.date.today()).days > 30
-#         print brainRegion.name,brainRegion.query
-#         handle=Entrez.esearch(db='pubmed',term=brainRegion.query,retmax=100000)
-#         record = Entrez.read(handle)
-#         print "number of ids %d"%len(record['IdList'])
-#         
-#         manual_transaction(record, brainRegion)
-# 
-#              
-#         brainRegion.last_indexed=datetime.date.today()
-#     else:
-#         print 'using existing results for',brainRegion.name

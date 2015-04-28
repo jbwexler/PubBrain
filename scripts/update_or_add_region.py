@@ -12,9 +12,11 @@ def compareNames(ontName, pklDict):
             voxels.append(name)
 
     return voxels
+
+
    
-def updateOrAddRegion(syn, pklDict):
-    synonyms = getSynonyms(syn)
+def updateOrAddRegion(regionName, pklDict, pkl=''):
+    synonyms = getSynonyms(regionName)
     
     # returns region if it or a synonym already exist. if region is new, will create it with query and is_atlasregion = False
     for syn in synonyms:
@@ -22,33 +24,45 @@ def updateOrAddRegion(syn, pklDict):
 #         print fooList
         if fooList:
             foo = fooList[0]
-            return foo
+            break
+#             return foo
     else:
         'adding new'
-        foo=BrainRegion.create(syn)
-        foo.query='"' + syn + '"[tiab]'
-        foo.is_atlasregion=False
+        foo=BrainRegion.create(regionName)
+        foo.query='"' + regionName + '"[tiab]'
+        foo.has_pkl=False
         foo.save()
     
+    
+    print pkl, regionName
+    if pkl == 'NIFgraph.pkl':
+        foo.NIF_name = regionName
+    elif pkl == 'uberongraph.pkl':
+        foo.Uberon_name = regionName
+    elif pkl == 'FMAgraph.pkl':
+        foo.FMA_name = regionName
+    
+    
     # adds matching 
-    atlas_voxels = []
+    atlas_regions = []
 
     for region in synonyms:
-        atlas_voxels += compareNames(region, pklDict) 
+        atlas_regions += compareNames(region, pklDict) 
 
 
-    # will then add/update atlasregions, atlas_voxels, is_atlasregion and synonyms
-    if atlas_voxels:
-        foo.atlasregions.add(foo)
-        for atlasPklName in atlas_voxels:
+    # will then add/update mapped_regions, atlas_regions, has_pkl and synonyms
+    if atlas_regions:
+        foo.mapped_regions.add(foo)
+        for atlasPklName in atlas_regions:
             objectSet = AtlasPkl.objects.filter(name=atlasPklName)
             for object in objectSet:
-                foo.atlas_voxels.add(object)
-        foo.is_atlasregion=True
+                foo.atlas_regions.add(object)
+        foo.has_pkl=True
     if synonyms:
         foo.synonyms = "$".join(synonyms)
     foo.save()
     return foo
+
 
 def makePklDict():
     pklList = [x.values()[0] for x in AtlasPkl.objects.all().values('name')]

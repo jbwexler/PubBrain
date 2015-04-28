@@ -10,7 +10,6 @@ from scripts import manual
 from scripts.update_or_add_region import *
 
 
-
 def tooBigList():
     pklDir = os.path.join(os.path.dirname(PubBrain), 'scripts/pickle_files/voxels')
     for object in AtlasPkl.objects.all():
@@ -26,7 +25,8 @@ def convertToList(filename):
         rows = [ line.split('\t') for line in fin ]
         d = { row[0]:row[1].replace('\n','') for row in rows[2:] }
     return d
-        
+
+
 def manualChanges():
     # keys are BrainRegion names and values are synonyms to be added
     
@@ -66,7 +66,7 @@ def manualChanges():
     atlasRegAdd = {}
     
     # list of names of BrainRegion objects to remove
-    regionRem = ['brain', 'white matter', 'matrix compartment', 'nucleus of cns' ]
+    regionRem = ['white matter', 'matrix compartment', 'nucleus of cns']
     print 'regionRem: '
     for region in regionRem:
         try:
@@ -84,7 +84,7 @@ def manualChanges():
         try:
             childObj = updateOrAddRegion(child, pklDict)
             parentObj = updateOrAddRegion(parent, pklDict)
-            parentObj.children.add(childObj)
+            parentObj.allChildren.add(childObj)
             parentObj.save()
         except Exception,e: print child, parent, str(e)
         else:
@@ -93,36 +93,23 @@ def manualChanges():
         
     # keys are BrainRegion names and values are children to remove
     print 'childRem:'
-    childRem = {'olfactory bulb': 'olfactory lobe', 'core auditory cortex':'auditory cortex','cerebral hemisphere':'cerebral cortex','body of hippocampus':'hippocampus'}
+    childRem = {'olfactory bulb':'olfactory lobe',
+                'core auditory cortex':'auditory cortex',
+                'primary auditory cortex':'core auditory cortex',
+                'cerebral hemisphere':'cerebral cortex',
+                'body of hippocampus':'hippocampus', 
+                'cortex of cerebral hemisphere':'cerebral hemisphere'
+    }
+    
     for region, child in childRem.items():
         try:
             object = BrainRegion.objects.get(name=region)
             childObj = BrainRegion.objects.get(name=child)
-            object.children.remove(childObj)
+            object.allChildren.remove(childObj)
             object.save()
         except Exception,e: print region, str(e)
         else:
             print 'removed: %s - %s  parent-child relation' % (region, child)
-    
-    # keys are BrainRegion names and values are parents to Add
-    parentAdd = {}
-    for region, parent in parentAdd.items():
-        try:
-            object = BrainRegion.objects.get(name=region)
-            parentObj = BrainRegion.objects.get(name=parent)
-            object.parents.add(parentObj)
-            object.save()
-        except Exception,e: print region, str(e)
-    
-    # keys are BrainRegion names and values are parents to remove
-    parentRem = {}
-    for region, parent in parentRem.items():
-        try:
-            object = BrainRegion.objects.get(name=region)
-            parentObj = BrainRegion.objects.get(name=parent)
-            object.parents.remove(parentObj)
-            object.save()
-        except Exception,e: print region, str(e)
 
 # manualChanges()    
     

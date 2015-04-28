@@ -38,6 +38,7 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'django_extensions',
     'pubbrain_app',
+    'mptt',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -66,6 +67,10 @@ DATABASES = {
 	'PASSWORD':'hungry',
     }
 }
+
+SHELL_PLUS_PRE_IMPORTS = (
+    ('scripts.query_functions', '*'),
+)
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.7/topics/i18n/
