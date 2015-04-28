@@ -3,6 +3,7 @@ from django.http import HttpResponse
 # from PubBrain.utils import *
 from django.template import RequestContext, loader
 from scripts.pubbrain_search import *
+
 class anatomyCount():
     name=''
     count=-1

@@ -13,21 +13,21 @@ def showChildAndPar():
             print region.name 
             print [x.name for x in intersection]
 
-def bestParent(region):
-    parents = region.allParents.all()
-    best = ''
-    for i in range(len(parents)-1):
-        parent = parents[i]
-        nextParent = parents[i+1]
-        if parent == nextParent:
-            continue
-        elif nextParent in allAbove(parent):
-            best = parent
-        elif parent in allAbove(nextParent):
-            best = nextParent
-        else:
-            print 'error'
-    return best
+# def bestParent(region):
+#     parents = region.allParents.all()
+#     best = ''
+#     for i in range(len(parents)-1):
+#         parent = parents[i]
+#         nextParent = parents[i+1]
+#         if parent == nextParent:
+#             continue
+#         elif nextParent in allAbove(parent):
+#             best = parent
+#         elif parent in allAbove(nextParent):
+#             best = nextParent
+#         else:
+#             print 'error'
+#     return best
         
 def createNetx():
     # creates a networkx digraph from ontology in database

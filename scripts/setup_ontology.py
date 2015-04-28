@@ -16,6 +16,7 @@ from scripts.update_or_add_region import *
 import profile
 from PubBrain.settings import BASE_DIR
 import numpy as np
+import networkx as nx
 django.setup()
 
 from pubbrain_app import models
@@ -216,37 +217,22 @@ def updateAtlasMappings():
             region.has_pkl=True
         region.save()
 
-def updateAtlasMappings():
-    pklDict = makePklDict()
-    for region in BrainRegion.objects.all():
-        synonyms = region.synonyms.split('$')
-        print region
-        atlas_voxels = []
-        for syn in synonyms:
-            atlas_voxels += compareNames(str(syn), pklDict) 
-        
-        if atlas_regions:
-            region.mapped_regions.add(region)
-            for atlasPklName in atlas_regions:
-                objectSet = AtlasPkl.objects.filter(name=atlasPklName)
-                for object in objectSet:
-                    region.atlas_regions.add(object)
-            region.has_pkl=True
-        region.save()
-        
-
 def delSynRegions():
     for region in BrainRegion.objects.all():
-        querySet = BrainRegion.objects.filter(name=region.name)
-        if querySet.count() > 1:
-            pk = [x.pk for x in querySet]
-            pmids = [x.sumPmids() for x in querySet]
+        synonyms = getSynonyms(region.name)
+        synRegions = []
+        for syn in synonyms:
+            querySet = BrainRegion.objects.filter(name=syn)
+            synRegions += querySet
+        if len(synRegions) > 1:
+            pmids = [x.sumPmids() for x in synRegions]
             maxIndex = pmids.index(max(pmids))
-            dontDelete = pk[maxIndex]
-            print dontDelete
-#             querySet.exclude(pk=dontDelete).delete()
-            for x in querySet.all():
-                print x.name, x.pk, x.sumPmids()
+            print [(x.name, x.pk, x.sumPmids()) for x in synRegions]
+            synRegions.pop(maxIndex)
+            print [(x.name, x.pk, x.sumPmids()) for x in synRegions]
+            for x in synRegions:
+                x.delete()
+        
             
         
 def bestParent():
@@ -267,6 +253,39 @@ def freshStart():
     addParChiSearch()
     addAllPkls()
 
+def createNetx():
+    # creates a networkx digraph from ontology in database
+    graph = nx.DiGraph()
+    for region in BrainRegion.objects.all():
+        graph.add_node(region.name, {'name':region.name})
+    for region in BrainRegion.objects.all():
+        for parent in region.allParents.all():
+            graph.add_edge(parent.name, region.name)
+    return(graph)
+
+def addGenerations():
+    graph = createNetx()
+    topList = nx.topological_sort(graph)
+    for i, name in enumerate(topList):
+        print name, i
+        region = BrainRegion.objects.get(name=name)
+        region.generation = i
+        region.save()
+
+def addBestParent():
+    for region in BrainRegion.objects.all():
+        allParents = region.allParents.all()
+        if allParents.count() > 1:
+            generations = [x.generation for x in allParents]
+            bestIndex = generations.index[max(generations)]
+            bestParent = allParents[bestIndex]
+        elif allParents.count() == 1:
+            bestParent = allParents[0]
+        
+        region.parent = bestParent
+        region.save()
+        
+
 # freshStart()
 # addAtlasPkls()
 # manualChanges()
@@ -277,9 +296,9 @@ def freshStart():
 # addParChiSearch()
 # updateAtlasMappings()
 # addAllPkls()
-# setupOntology("NIFgraph.pkl")
-# setupOntology("uberongraph.pkl")
-# setupOntology("FMAgraph.pkl")
-# manualChanges()
-# delSamePar()
+setupOntology("NIFgraph.pkl")
+setupOntology("uberongraph.pkl")
+setupOntology("FMAgraph.pkl")
+manualChanges()
+delSamePar()
 delSynRegions()

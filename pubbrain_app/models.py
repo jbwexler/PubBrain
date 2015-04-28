@@ -1,4 +1,5 @@
 from django.db import models
+from mptt.models import MPTTModel, TreeForeignKey
 from django.db.models.fields.related import ManyToManyField
 
 
@@ -15,7 +16,7 @@ class AtlasPkl(models.Model):
         return entry
 
 # represents a brain region from the ontology   
-class BrainRegion(models.Model):
+class BrainRegion(MPTTModel):
     
     # name of the region - from the ontology
     name=models.TextField(max_length=1000)
@@ -41,7 +42,7 @@ class BrainRegion(models.Model):
     allParents=models.ManyToManyField('self', null=True, blank=True, symmetrical=False, related_name='allChildren')
     
     # best parent, which will bes used in the hierarchical graph
-    parent=models.ForeignKey('self', null=True, blank=True, related_name='children')
+    parent = TreeForeignKey('self', null=True, blank=True, related_name='children', db_index=True)
 
     # region(s) that best represent this region (can be itself). 
     mapped_regions=models.ManyToManyField('self', null=True, blank=True,symmetrical=False)
@@ -65,6 +66,9 @@ class BrainRegion(models.Model):
     def sumPmids(self):
         sum=self.uni_pmids.all().count() + self.left_pmids.all().count() + self.right_pmids.all().count()
         return sum
+    
+    class MPTTMeta:
+        order_insertion_by = ['name']
 
 # represents a PubMed ID
 
