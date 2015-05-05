@@ -16,7 +16,9 @@ def compareNames(ontName, pklDict):
 
    
 def updateOrAddRegion(regionName, pklDict, pkl=''):
-    synonyms = getSynonyms(regionName)
+    synonyms = set(getSynonyms(regionName))
+    inSyn = [str(x) for (x,) in BrainRegion.objects.filter(synonyms__contains='$'+regionName+'$').values_list('name')]
+    synonyms.update(set(inSyn))
     
     # returns region if it or a synonym already exist. if region is new, will create it with query and is_atlasregion = False
     for syn in synonyms:
@@ -46,8 +48,8 @@ def updateOrAddRegion(regionName, pklDict, pkl=''):
     # adds matching 
     atlas_regions = []
 
-    for region in synonyms:
-        atlas_regions += compareNames(region, pklDict) 
+    for syn in synonyms:
+        atlas_regions += compareNames(syn, pklDict) 
 
 
     # will then add/update mapped_regions, atlas_regions, has_pkl and synonyms
@@ -59,7 +61,7 @@ def updateOrAddRegion(regionName, pklDict, pkl=''):
                 foo.atlas_regions.add(object)
         foo.has_pkl=True
     if synonyms:
-        foo.synonyms = "$".join(synonyms)
+        foo.synonyms = '$' + "$".join(synonyms) + '$'
     foo.save()
     return foo
 

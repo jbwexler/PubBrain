@@ -146,5 +146,5 @@ def index_pubmed(force=False):
 #     handle2=Entrez.efetch(db='pubmed',id=idList,retmax=100000,retmode='xml',rettype='abstract') 
 #     record2 = Entrez.read(handle2)
 
-profile.run('print index_pubmed(); print')
+index_pubmed()
     

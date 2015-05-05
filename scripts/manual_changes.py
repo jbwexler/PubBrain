@@ -32,36 +32,6 @@ def manualChanges():
     
     pklDict = makePklDict()
     
-    synAdd = convertToList('add_synonyms.txt')
-    print synAdd
-    print 'synAdd:'
-    for region, syn in synAdd.items():
-        try:
-            queryset = BrainRegion.objects.filter(synonyms__contains=region).all()
-            for object in queryset:
-                synonyms = set(object.synonyms.split('$'))
-                if region in synonyms:
-                    synonyms.add(syn)
-                    object.synonyms = "$".join(list(synonyms))
-                    object.save()
-        except Exception,e: print region, str(e)
-        else:
-            print 'added: %s as a a synonym of: %s ' %(syn, region)
-    print
-    # keys are BrainRegion names and values are synonyms to be removed
-    synRem = {'dorsal supraoptic decussation':'dorsal', 'ventral supraoptic decussation':'ventral', 'ca2 field of hippocampus':'ca2'}
-    print 'synRemo: '
-    for region, syn in synRem.items():
-        try:
-            object = BrainRegion.objects.get(name=region)
-            synonyms = object.synonyms.split('$')
-            synonyms.remove(syn)
-            object.synonyms = "$".join(synonyms)
-            object.save()
-        except Exception,e: print region, str(e)
-        else:
-            print 'removed: ', region, syn
-    print  
     # keys are BrainRegion names and values are atlasregion names to be added
     atlasRegAdd = {}
     
@@ -93,13 +63,7 @@ def manualChanges():
         
     # keys are BrainRegion names and values are children to remove
     print 'childRem:'
-    childRem = {'olfactory bulb':'olfactory lobe',
-                'core auditory cortex':'auditory cortex',
-                'primary auditory cortex':'core auditory cortex',
-                'cerebral hemisphere':'cerebral cortex',
-                'body of hippocampus':'hippocampus', 
-                'cortex of cerebral hemisphere':'cerebral hemisphere'
-    }
+    childRem = convertToList('rem_children.txt')
     
     for region, child in childRem.items():
         try:

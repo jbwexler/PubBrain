@@ -138,7 +138,7 @@ def parChiRecursion(region, direction, level = ''):
 def addParChiSearch():
     # for regions whose has_pkl == false, it will search through parents and children recursively to find regions that are atlas regions
     # and add these to the mapped_regions field
-    for region in models.BrainRegion.objects.filter(has_pkl=False):
+    for region in BrainRegion.objects.filter(has_pkl=False):
         print region.name
         matches = parChiRecursion(region, 'parents') + parChiRecursion(region, 'children')
         region.mapped_regions.clear()
@@ -148,7 +148,7 @@ def addParChiSearch():
 
 def addAtlasPkls():
     # adds an AtlasPkl object for each .pkl file in the voxels dir
-    for folder in os.listdir('pickle_files/atlas_region_pickles/'):
+    for folder in os.listdir('pickle_files/atlas_region_voxels/'):
         if not folder.startswith('.'):
             for fileName in os.listdir(os.path.join('pickle_files/atlas_region_voxels/', folder)):
                 pkl = os.path.join(folder,fileName)
@@ -194,7 +194,7 @@ def redoSyns():
     # warning!!! doesn't include manually added synonyms. maybe add this in future?
     for region in BrainRegion.objects.exclude(synonyms=None):
         newSyn = getSynonyms(region.name)
-        newSynStr = "$".join(newSyn)
+        newSynStr = '$'+"$".join(newSyn)+'$'
         print newSynStr
         region.synonyms = newSynStr
         region.save()
@@ -225,21 +225,14 @@ def delSynRegions():
             querySet = BrainRegion.objects.filter(name=syn)
             synRegions += querySet
         if len(synRegions) > 1:
-            pmids = [x.sumPmids() for x in synRegions]
-            maxIndex = pmids.index(max(pmids))
-            print [(x.name, x.pk, x.sumPmids()) for x in synRegions]
+            parChi = [x.allParents.all().count()+x.allChildren.all().count() for x in synRegions]
+            maxIndex = parChi.index(max(parChi))
+            print [(x.name, x.pk, x.allParents.all().count()+x.allChildren.all().count()) for x in synRegions]
             synRegions.pop(maxIndex)
-            print [(x.name, x.pk, x.sumPmids()) for x in synRegions]
+            print [(x.name, x.pk, x.allParents.all().count()+x.allChildren.all().count()) for x in synRegions]
             for x in synRegions:
                 x.delete()
         
-            
-        
-def bestParent():
-    # chooses a best parent from 'allParents' and adds it to 'parent'
-    # best parent is determined by the one that is not a parent
-    pass
-    
 def freshStart():
     #performs all steps necessary to setup ontology when creating a fresh database. the order of the ontology graphs is important
     #to keep the BrainRegion names the same as before
@@ -263,27 +256,36 @@ def createNetx():
             graph.add_edge(parent.name, region.name)
     return(graph)
 
-def addGenerations():
+def addTopoSort():
+    # adds topological_sort field by inputting all regions into netx graph and calling topological_sort()
     graph = createNetx()
     topList = nx.topological_sort(graph)
     for i, name in enumerate(topList):
         print name, i
         region = BrainRegion.objects.get(name=name)
-        region.generation = i
+        region.topological_sort = i
         region.save()
 
 def addBestParent():
+    # determines which parent is "best" by choosing the parent with the highest topological_sort values, meaning it is lowest on the tree
+    # and thus closest to the region
     for region in BrainRegion.objects.all():
         allParents = region.allParents.all()
         if allParents.count() > 1:
-            generations = [x.generation for x in allParents]
-            bestIndex = generations.index[max(generations)]
+            topoSorts = [x.topological_sort for x in allParents]
+            bestIndex = topoSorts.index(max(topoSorts))
             bestParent = allParents[bestIndex]
+#             print region.name, bestParent.name, [x.name for x in allParents]
         elif allParents.count() == 1:
             bestParent = allParents[0]
-        
+            region.name, bestParent.name
+        else:
+            bestParent = None
         region.parent = bestParent
-        region.save()
+        try:
+            region.save()
+        except:
+            print 'error!'
         
 
 # freshStart()
@@ -296,9 +298,11 @@ def addBestParent():
 # addParChiSearch()
 # updateAtlasMappings()
 # addAllPkls()
-setupOntology("NIFgraph.pkl")
-setupOntology("uberongraph.pkl")
-setupOntology("FMAgraph.pkl")
-manualChanges()
-delSamePar()
-delSynRegions()
+# addAtlasPkls()
+# setupOntology("NIFgraph.pkl")
+# setupOntology("uberongraph.pkl")
+# setupOntology("FMAgraph.pkl")
+# manualChanges()
+# delSynRegions()
+addBestParent()
+# addTopoSort()

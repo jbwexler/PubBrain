@@ -62,7 +62,7 @@ WSGI_APPLICATION = 'PubBrain.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'pubbrain_dev',
+        'NAME': 'pubbrain_dev2',
 	'USER': 'root',
 	'PASSWORD':'hungry',
     }

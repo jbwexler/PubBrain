@@ -47,8 +47,8 @@ class BrainRegion(MPTTModel):
     # region(s) that best represent this region (can be itself). 
     mapped_regions=models.ManyToManyField('self', null=True, blank=True,symmetrical=False)
     
-    # generation level, highest on the hierarchy (has no parents) should equal 0
-    generation = models.IntegerField(null=True, blank=True)
+    # generation level, highest on the hierarchy (ie 'brain' or 'encephalon') should be closest to 0
+    topological_sort = models.IntegerField(null=True, blank=True)
     
     # name in NIF, Uberon and FMA, if present
     # note: region from ontology may contain the words 'right' or 'left', which won't be present here

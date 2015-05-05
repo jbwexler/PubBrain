@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load static %}
+{% block includes %}
+{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{% static "css/pubbrain_search.css" %}">
+<script type="text/javascript" src="{% static "scripts/pubbrain_search.js"%}"/>
+{% include '_papaya_viewer_head.html.haml' %}
+{% endblock %}
+{% block content %}
+<body>
+	<div class="container">
+	
+		
+	
+	</div>
+	<div class="container">
+
+	<ul class="tabs">
+		<li class="tab-link current" data-tab="tab-1">Tab One</li>
+		<li class="tab-link" data-tab="tab-2">Tab Two</li>
+		<li class="tab-link" data-tab="tab-3">Tab Three</li>
+		<li class="tab-link" data-tab="tab-4">Tab Four</li>
+	</ul>
+
+	<div id="tab-1" class="tab-content current">
+		Hello
+	</div>
+	<div id="tab-2" class="tab-content">
+		 {% include "ontology.html" %}
+	</div>
+</body>
+{% endblock content %}

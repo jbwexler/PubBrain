@@ -1,0 +1,10 @@
+BrainRegion		Child
+
+olfactory bulb	olfactory lobe
+core auditory cortex	auditory cortex
+primary auditory cortex	core auditory cortex
+cerebral hemisphere	cerebral cortex
+body of hippocampus	hippocampus 
+cortex of cerebral hemisphere	cerebral hemisphere
+cerebellum vermis lobule iii	vermic lobule ii
+vermic lobule ii	cerebellum vermis lobule iii
