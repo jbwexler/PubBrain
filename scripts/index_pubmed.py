@@ -103,7 +103,7 @@ def index_pubmed(force=False):
             pmidQuerySet = Pmid.objects.filter(Q(uni_brain_regions=region)|Q(left_brain_regions=region)|Q(right_brain_regions=region))
             pmidSet = set([str(x) for (x,) in pmidQuerySet.values_list('pubmed_id')])
             
-            for syn in region.synonyms.split("$"):
+            for syn in region.synonyms[1:-1].split("$"):
                 start_time = time.time()
                 query = '"' + syn + '"[tiab]'
                 print query

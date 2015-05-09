@@ -1,5 +1,6 @@
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render_to_response, render, redirect
 from django.http import HttpResponse
+from django.http.response import HttpResponseRedirect, HttpResponseForbidden
 from django.core.urlresolvers import reverse
 # from PubBrain.utils import *
 from django.contrib.admin.utils import unquote, quote
@@ -7,6 +8,7 @@ from django.template import RequestContext, loader
 from scripts.pubbrain_search import *
 from models import *
 import util
+import scripts.pubbrain_search
 
 class anatomyCount():
     name=''
@@ -41,20 +43,25 @@ def index(request):
 #                                     'img_max':max(c.values()),'file_name':'%s'%imgfile})
 #     return HttpResponse(template.render(context))
     return HttpResponse('Welcome to PubBrain')
-    
 
-def visualize(request):
-    image = pubbrain_search(request.GET.get('search',''))
-    template=loader.get_template('papaya_frame.html.haml')
-    context = {
-        'image': image
-    }
-    return render(request, template, context)
-
+def papaya_js_embed(request,pk, iframe=None):
+    tpl = 'papaya_embed.tpl.js'
+    mimetype = "text/javascript"
+    if iframe is not None:
+        tpl = 'papaya_frame.html.haml'
+        mimetype = "text/html"
+    searchObject = PubmedSearch.objects.get(pk=pk)
+    context = {'searchObject': searchObject, 'request':request}
+    return render_to_response(tpl,
+                              context, content_type=mimetype)
 def search(request):
-    keyword = 'hippocampus'
+    search = request.GET.get('search')
+    try:
+        searchObject = PubmedSearch.objects.get(query=search)
+    except NameError:
+        searchObject = pubbrain_search(search)
     template = 'pubbrain_search.html'
-    context = {}
+    context = {'searchObject':searchObject}
     return render(request, template, context)
 
 def get_tree_data(qs, max_level):
@@ -64,7 +71,9 @@ def get_tree_data(qs, max_level):
 
 def tree_json_view(request):
         node_id = request.GET.get('node')
-
+        query = request.GET.get('query')
+        searchObject = PubmedSearch.objects.filter(query=query)[0]
+        
         if node_id:
             node = BrainRegion.objects.get(pk=node_id)
             max_level = node.level + 1

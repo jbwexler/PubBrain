@@ -80,6 +80,7 @@ def addAllPkls():
         
         
         if len(uniPkls) > 1:
+            print uniPkls
             uniArray = combinePkls(uniPkls)
             pklFile = region.name.replace('/', '_').replace(' ', '_') + '.pkl'
             uni = os.path.join('ontology', pklFile)
@@ -91,6 +92,7 @@ def addAllPkls():
             uni = ''
             
         if len(leftPkls) > 1:
+            print leftPkls
             leftArray = combinePkls(leftPkls)
             pklFile = region.name.replace('/', '_').replace(' ', '_') + '.pkl'
             left = os.path.join('ontology', pklFile)
@@ -102,6 +104,7 @@ def addAllPkls():
             left = ''
             
         if len(rightPkls) > 1:
+            print rightPkls
             rightArray = combinePkls(rightPkls)
             pklFile = region.name.replace('/', '_').replace(' ', '_') + '.pkl'
             right = os.path.join('ontology', pklFile)
@@ -125,7 +128,8 @@ def parChiRecursion(region, direction, level = ''):
     else:
         matchingRelatives = []
         if direction == 'parents':
-            for parent in region.parent.all():
+            parent = region.parent
+            if parent:
                 print level, len(level), parent.name
                 matchingRelatives += parChiRecursion(parent, direction, level)
         else:
@@ -149,7 +153,7 @@ def addParChiSearch():
 def addAtlasPkls():
     # adds an AtlasPkl object for each .pkl file in the voxels dir
     for folder in os.listdir('pickle_files/atlas_region_voxels/'):
-        if not folder.startswith('.'):
+        if not folder.startswith('.') and folder != 'ontology':
             for fileName in os.listdir(os.path.join('pickle_files/atlas_region_voxels/', folder)):
                 pkl = os.path.join(folder,fileName)
                 atlas = folder.replace('_', ' ')
@@ -202,7 +206,8 @@ def redoSyns():
 def updateAtlasMappings():
     pklDict = makePklDict()
     for region in BrainRegion.objects.all():
-        synonyms = region.synonyms.split('$')
+        synonymsString = region.synonyms[1:-1]
+        synonyms = synonymsString.split('$')
         print region
         atlas_regions = []
         for syn in synonyms:
@@ -296,13 +301,15 @@ def addBestParent():
 # delSamePar()
 # printSynRegions()
 # addParChiSearch()
-# updateAtlasMappings()
-# addAllPkls()
+addAtlasPkls()
+updateAtlasMappings()
+addParChiSearch()
+addAllPkls()
 # addAtlasPkls()
 # setupOntology("NIFgraph.pkl")
 # setupOntology("uberongraph.pkl")
 # setupOntology("FMAgraph.pkl")
 # manualChanges()
 # delSynRegions()
-addBestParent()
+# addBestParent()
 # addTopoSort()

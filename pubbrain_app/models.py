@@ -92,7 +92,7 @@ class Pmid(models.Model):
 # represents a saved search
 class PubmedSearch(models.Model):
     date_added=models.DateField(auto_now_add=True)
-    filename=models.CharField(max_length=255) 
+    file=models.FileField(null=True, blank=True)
     last_updated=models.DateField(blank=True, null=True)
     # the pubmed query for the region
     query=models.CharField(max_length=255)

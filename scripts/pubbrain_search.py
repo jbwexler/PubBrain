@@ -5,9 +5,10 @@ from pubbrain_app.models import BrainRegion, Pmid, PubmedSearch, SearchToRegion
 from scipy.special._ufuncs import errprint
 Entrez.email='poldrack@stanford.edu'
 import datetime
-import profile
+import cProfile
 import os
 import django
+from django.core.files import File
 django.setup()
 from pubbrain_app import models
 from django.db import transaction
@@ -15,7 +16,7 @@ from django.db import transaction
 import numpy as np
 import nibabel as nib
 import numpy.linalg as npl
-from PubBrain.settings import BASE_DIR
+from PubBrain.settings import BASE_DIR, MEDIA_ROOT
 
     
 
@@ -52,10 +53,13 @@ def pklsToNifti(searchObject, aff):
                 countDict[pkl] += int(count)
         
     for pkl, count in countDict.items():
+        print pkl, count
         with open(os.path.join(BASE_DIR,'scripts/pickle_files/atlas_region_voxels', pkl),'rb') as input:
             voxels = pickle.load(input)
         sumArray[voxels] += count
+    print sumArray
     img = nib.Nifti1Image(sumArray, affine=aff)
+    img.set_data_dtype(np.float32)
     return img
 
 def tallyBrainRegions(idList, searchObject):
@@ -94,13 +98,12 @@ def tallyBrainRegions(idList, searchObject):
                         d[region] = 1
                     else:
                         d[region] += 1
-
     allDicts = {'u':uniCount, 'l':leftCount, 'r':leftCount, 'ul':uniLeftCount, 'ur':uniRightCount}
     for side, dict in allDicts.items():
         for region, count in dict.items():
             SearchToRegion.objects.create(brain_region=region, pubmed_search=searchObject, count=count, side=side)
 
-
+            
 def pubbrain_search(search):
 
     try:
@@ -114,7 +117,6 @@ def pubbrain_search(search):
         record = Entrez.read(handle)
         idList = Pmid.objects.filter(pubmed_id__in=record['IdList'])
         searchObject.pubmed_ids = idList
-        
     #     data = np.arange(4*4*3).reshape(4,4,3)
     #     img = nib.Nifti1Image(data, affine=np.eye(4))
     #     nib.save(img, os.path.join('/Users/jbwexler/poldrack_lab/cs/other','test4d.nii.gz'))
@@ -130,18 +132,17 @@ def pubbrain_search(search):
         
         
         img = pklsToNifti(searchObject, affine2mm)
-        filename = os.path.join('/Users/jbwexler/cs/poldracklab/other', search +'.nii.gz')
+        filename = os.path.join(MEDIA_ROOT, 'temp', search +'.nii.gz')
         nib.save(img, filename)
-        searchObject.filename = filename
-        searchObject.last_updated = datetime.date.today()
-#         searchObject.save()
-        
+        with open(filename) as imgFile:
+            searchObject.file = File(imgFile)
+            searchObject.last_updated = datetime.date.today()
+            searchObject.save()
+        os.remove(filename)
         
     return searchObject
     
 
         
  
- 
-pubbrain_search('reward system')
-
+cProfile.runctx("pubbrain_search('vision')", None, locals())

@@ -5,11 +5,18 @@ from django.contrib import admin
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 import pubbrain_app
 
+
 urlpatterns = patterns('',
     url(r'^$', index, name='index'),
     url(r'^json', tree_json_view, name='json'),
+    url(r'^(?P<pk>\d+)/papaya/embedview$', 
+        papaya_js_embed,
+        {'iframe':True},name='papaya_iframe_embed'),
     url(r'^search', search, name='pubbrain_search'),
     url(r'^admin/', include(admin.site.urls)),
-    url(r'^visualize/$', 'pubbrain_app.views.visualize', name='visualize')
+    url(r'^(?P<pk>\d+)/js/embed$',
+        papaya_js_embed,
+        name='papaya_js_embed'),
+    
 )
 urlpatterns += staticfiles_urlpatterns()
