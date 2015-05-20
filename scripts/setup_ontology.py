@@ -73,16 +73,17 @@ def addAllPkls():
     # for each brainregion that has is mapped to AtlasPkl(s), will add the appropriate pkl files to the brainregion
     # if there are multiple AtlasPkls, it will combine them into new pkl files saved in the 'atlas_region_voxels/ontology
     for region in BrainRegion.objects.filter(atlas_regions__isnull=False):
-        uniPkls = [x for (x,) in region.atlas_regions.all().values_list('uni_pkl') if x is not None]
+        
         leftPkls = [x for (x,) in region.atlas_regions.all().values_list('left_pkl') if x is not None]
         rightPkls = [x for (x,) in region.atlas_regions.all().values_list('right_pkl') if x is not None]
+        uniPkls = [x for (x,) in region.atlas_regions.all().values_list('uni_pkl') if x is not None] + leftPkls + rightPkls
         pklDir = os.path.join(BASE_DIR,'scripts/pickle_files/atlas_region_voxels' )
         
         
         if len(uniPkls) > 1:
             print uniPkls
             uniArray = combinePkls(uniPkls)
-            pklFile = region.name.replace('/', '_').replace(' ', '_') + '.pkl'
+            pklFile = region.name.replace('/', '_').replace(' ', '_') + '_uni' + '.pkl'
             uni = os.path.join('ontology', pklFile)
             with open(os.path.join(pklDir, uni),'wb') as output:
                 pickle.dump(uniArray, output, -1)
@@ -94,7 +95,7 @@ def addAllPkls():
         if len(leftPkls) > 1:
             print leftPkls
             leftArray = combinePkls(leftPkls)
-            pklFile = region.name.replace('/', '_').replace(' ', '_') + '.pkl'
+            pklFile = region.name.replace('/', '_').replace(' ', '_') + '_left' + '.pkl'
             left = os.path.join('ontology', pklFile)
             with open(os.path.join(pklDir, left),'wb') as output:
                 pickle.dump(leftArray, output, -1)
@@ -106,7 +107,7 @@ def addAllPkls():
         if len(rightPkls) > 1:
             print rightPkls
             rightArray = combinePkls(rightPkls)
-            pklFile = region.name.replace('/', '_').replace(' ', '_') + '.pkl'
+            pklFile = region.name.replace('/', '_').replace(' ', '_') + '_right' + '.pkl'
             right = os.path.join('ontology', pklFile)
             with open(os.path.join(pklDir, right),'wb') as output:
                 pickle.dump(rightArray, output, -1)
@@ -114,7 +115,8 @@ def addAllPkls():
             right = rightPkls[0]
         else:
             right = ''
-            
+        
+        
         region.uni_pkls = uni
         region.left_pkls = left
         region.right_pkls = right
@@ -301,9 +303,9 @@ def addBestParent():
 # delSamePar()
 # printSynRegions()
 # addParChiSearch()
-addAtlasPkls()
-updateAtlasMappings()
-addParChiSearch()
+# addAtlasPkls()
+# updateAtlasMappings()
+# addParChiSearch()
 addAllPkls()
 # addAtlasPkls()
 # setupOntology("NIFgraph.pkl")

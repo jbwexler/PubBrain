@@ -3,4 +3,4 @@ django-extentions
 MySQL-python
 biopython
 nibabel
-
+django-datatables-view

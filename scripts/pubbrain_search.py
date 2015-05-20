@@ -3,6 +3,7 @@ from Bio.Entrez import efetch, read
 import pickle
 from pubbrain_app.models import BrainRegion, Pmid, PubmedSearch, SearchToRegion
 from scipy.special._ufuncs import errprint
+from astropy.modeling.functional_models import Delta1D
 Entrez.email='poldrack@stanford.edu'
 import datetime
 import cProfile
@@ -16,6 +17,7 @@ from django.db import transaction
 import numpy as np
 import nibabel as nib
 import numpy.linalg as npl
+from collections import Counter
 from PubBrain.settings import BASE_DIR, MEDIA_ROOT
 
     
@@ -64,46 +66,28 @@ def pklsToNifti(searchObject, aff):
 
 def tallyBrainRegions(idList, searchObject):
     # counts the number of instances each brain region in the results and adds these to the pubmed search object
-    uniCount, leftCount, rightCount, uniLeftCount, uniRightCount = ({} for i in range(5))
-    
-    for id in idList:
-        uniLeftBrainRegions = []
-        uniRightBrainRegions = []
-        try: uniBrainRegions = [x for x in id.uni_brain_regions.all()]
-        except: uniBrainRegions = []
-        try: leftBrainRegions = [x for x in id.left_brain_regions.all()]
-        except: leftBrainRegions = []
-        try: rightBrainRegions = [x for x in id.right_brain_regions.all()]
-        except: rightBrainRegions = []
-        
-        for uni in uniBrainRegions:
-            if uni in leftBrainRegions and uni in rightBrainRegions:
-                leftBrainRegions.remove(uni)
-                rightBrainRegions.remove(uni)
-            elif uni in leftBrainRegions:
-                uniBrainRegions.remove(uni)
-                leftBrainRegions.remove(uni)
-                uniLeftBrainRegions.append(uni)
-            elif uni in rightBrainRegions:
-                uniBrainRegions.remove(uni)
-                rightBrainRegions.remove(uni)
-                uniRightBrainRegions.append(uni)
-                
-        allLists = [[uniBrainRegions,uniCount], [leftBrainRegions,leftCount], [rightBrainRegions,rightCount], [uniLeftBrainRegions,uniLeftCount], [uniRightBrainRegions,uniRightCount]]
-
-        for [l, d] in allLists:
-            if l:
-                for region in l:
-                    if d.get(region) == None:
-                        d[region] = 1
-                    else:
-                        d[region] += 1
+    time1 = datetime.datetime.now()
+    uniRegions = idList.values_list('uni_brain_regions', flat =True)
+    time2 = datetime.datetime.now()
+    uniCount = Counter(uniRegions)
+    time3 = datetime.datetime.now()
+    leftRegions = idList.values_list('left_brain_regions', flat =True)
+    leftCount = Counter(leftRegions)
+    rightRegions = idList.values_list('right_brain_regions', flat =True)
+    rightCount = Counter(rightRegions)
+    uniLeftCount = {}
+    uniRightCount = {}
     allDicts = {'u':uniCount, 'l':leftCount, 'r':leftCount, 'ul':uniLeftCount, 'ur':uniRightCount}
     for side, dict in allDicts.items():
-        for region, count in dict.items():
-            SearchToRegion.objects.create(brain_region=region, pubmed_search=searchObject, count=count, side=side)
-
-            
+        for id, count in dict.items():
+            if id is not None:
+                region = BrainRegion.objects.get(id=id)
+                SearchToRegion.objects.create(brain_region=region, pubmed_search=searchObject, count=count, side=side)  
+                  
+    print time2 - time1
+    print time3 - time2
+    print 
+     
 def pubbrain_search(search):
 
     try:
@@ -113,10 +97,17 @@ def pubbrain_search(search):
         searchObject.save()
         
     if searchObject.last_updated is None or (datetime.date.today() - searchObject.last_updated).days > 30:
+        time1 = datetime.datetime.now()
         handle=Entrez.esearch(db='pubmed',term=search,retmax=100000)
+        time2 = datetime.datetime.now()
         record = Entrez.read(handle)
+        time3 = datetime.datetime.now()
         idList = Pmid.objects.filter(pubmed_id__in=record['IdList'])
+        time4 = datetime.datetime.now()
+        print
         searchObject.pubmed_ids = idList
+        print
+        time5 = datetime.datetime.now()
     #     data = np.arange(4*4*3).reshape(4,4,3)
     #     img = nib.Nifti1Image(data, affine=np.eye(4))
     #     nib.save(img, os.path.join('/Users/jbwexler/poldrack_lab/cs/other','test4d.nii.gz'))
@@ -128,6 +119,7 @@ def pubbrain_search(search):
     #     img = nib.load('/Applications/fmri_progs/fsl/data/atlases/STN/STN-maxprob-thr25-0.5mm.nii.gz')
     #     data = img.get_data()
         
+
         tallyBrainRegions(idList, searchObject)
         
         
@@ -139,10 +131,17 @@ def pubbrain_search(search):
             searchObject.last_updated = datetime.date.today()
             searchObject.save()
         os.remove(filename)
+        time6 = datetime.datetime.now()
+        
+        print time2 - time1
+        print time3 - time2
+        print time4 - time3
+        print time5 - time4
+        print time6 - time5
         
     return searchObject
     
 
         
  
-cProfile.runctx("pubbrain_search('vision')", None, locals())
+# cProfile.runctx("pubbrain_search('sensory')", None, locals())

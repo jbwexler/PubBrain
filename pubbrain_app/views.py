@@ -9,6 +9,8 @@ from scripts.pubbrain_search import *
 from models import *
 import util
 import scripts.pubbrain_search
+# from statsmodels.tsa.vector_ar.tests.example_svar import mymodel
+from django_datatables_view.base_datatable_view import BaseDatatableView
 
 class anatomyCount():
     name=''
@@ -58,7 +60,7 @@ def search(request):
     search = request.GET.get('search')
     try:
         searchObject = PubmedSearch.objects.get(query=search)
-    except NameError:
+    except:
         searchObject = pubbrain_search(search)
     template = 'pubbrain_search.html'
     context = {'searchObject':searchObject}
@@ -83,9 +85,26 @@ def tree_json_view(request):
         qs = util.get_tree_queryset(
             model=BrainRegion,
             node_id=node_id,
+            searchObject=searchObject,
             max_level=max_level,
         )
 
         tree_data = get_tree_data(qs, max_level)
         return util.JsonResponse(tree_data)
 
+class OrderListJson(BaseDatatableView):
+    model = BrainRegion
+    columns = ['name','number of hits']
+    max_display_length = 500
+    
+    def render_column(self, row, column):
+        return super(OrderListJson, self).render_column(row, column)
+
+    def filter_queryset(self, qs):
+#         searchObject = self.context.GET.get('searchObject')
+        search = self.request.GET.get('search')
+        searchObject = PubmedSearch.objects.get(query=search)
+        if searchObject:
+            qs = searchObject.brain_regions.all()
+        return qs
+        

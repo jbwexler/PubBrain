@@ -6,7 +6,16 @@
 	<title>Ontology</title>
 	<script src="{% static "scripts/jquery.min.js"%}"></script>
 	<script src="{% static "jqTree/tree.jquery.js"%}"></script>
-	<script src="{% static "scripts/ontology.js"%}"></script>
+	<script type="text/javascript">
+		$.getJSON(
+	    '/pubbrain_app/json?query=' + '{{ searchObject.query }}',
+	    function(data) {
+	        $('#tree1').tree({
+	            data: data
+	        });
+	    }
+		);
+	</script>
 	<link rel="stylesheet" href="{% static "jqTree/jqtree.css"%}"></script>
 </head>
 <body>

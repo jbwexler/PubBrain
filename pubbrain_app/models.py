@@ -1,6 +1,10 @@
 from django.db import models
 from mptt.models import MPTTModel, TreeForeignKey
 from django.db.models.fields.related import ManyToManyField
+from django.dispatch.dispatcher import receiver
+from django.db.models.signals import post_delete, pre_delete
+import os
+import operator
 
 
 # represents an atlas region
@@ -102,6 +106,22 @@ class PubmedSearch(models.Model):
     def create(cls, query):
         result = cls(query=query)
         return result
+    def mappedRegionsList(self):
+        querySet = self.searchtoregion_set.prefetch_related('brain_region').all()
+        uniSet = querySet.filter(side='u').values_list('brain_region__mapped_regions__name','count')
+        uniDict = {}
+        for (name, count) in uniSet:
+            uniDict[name] = 0
+        for (name, count) in uniSet:
+            uniDict[name] += count
+        sorted_x = sorted(uniDict.items(), key=operator.itemgetter(1))
+        return sorted_x
+
+@receiver(pre_delete, sender=PubmedSearch)
+def delSearchImg(sender, instance, **kwargs):
+    path = instance.file.path
+    print path
+    os.remove(file)
 
 class SearchToRegion(models.Model):
     SIDES = (

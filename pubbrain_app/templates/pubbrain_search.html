@@ -16,7 +16,18 @@
 
          var filename = "{{ searchObject.file.url }}".replace(/^.*[\\\/]/, '')
          params[filename] = {"parametric": true,  "lut":"OrRd", "negative_lut":"PuBu", "alpha":"0.75", "symmetric": true};
+
+		$(document).ready(function() {
+    		var oTable = $("table[class*=regions-datatable]").dataTable({
+        		// ...
+        		"processing": true,
+        		"serverSide": true,
+        		"ajax": "{% url 'order_list_json' %}"
+    		});
+    		// ...
+		});
 </script>
+
 
 <script type="text/javascript" src="{% static "scripts/pubbrain_search.js"%}"/>
 
@@ -45,9 +56,18 @@
 	</ul>
 
 	<div id="tab-1" class="tab-content current">
-		<div id='NeuroVaultPapayaHolder' style='width:860px; height:860px;'>
+		<div id='NeuroVaultPapayaHolder'>
   			<div class='papaya' data-params='params'></div>
   		</div>
+  		<table class='table table-condensed table-striped table-hover regions-datatable'>
+  			<thead>
+  				<tr>
+  					<th>Name</th>
+  					<th>Number of Hits</th>
+  				</tr>
+  			</thead>
+  			<tbody></tbody>
+  		</table>
 	</div>
 	<div id="tab-2" class="tab-content">
 		 {% include "ontology.html" %}

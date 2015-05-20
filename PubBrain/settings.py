@@ -27,7 +27,6 @@ TEMPLATE_DEBUG = True
 ALLOWED_HOSTS = []
 
 MEDIA_ROOT = os.path.join(BASE_DIR,'media')
-MEDIA_URL = '/media/'
 
 # Application definition
 
@@ -39,8 +38,8 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_extensions',
-    'pubbrain_app',
     'coffeescript',
+    'pubbrain_app',
     'mptt',
 )
 
@@ -52,6 +51,7 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'pubbrain_app.middleware.ProfileMiddleware',
 )
 
 ROOT_URLCONF = 'PubBrain.urls'

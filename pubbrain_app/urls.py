@@ -17,6 +17,7 @@ urlpatterns = patterns('',
     url(r'^(?P<pk>\d+)/js/embed$',
         papaya_js_embed,
         name='papaya_js_embed'),
+    url(r'^datatable/results$', OrderListJson.as_view(), name='order_list_json'),
     
 )
 urlpatterns += staticfiles_urlpatterns()

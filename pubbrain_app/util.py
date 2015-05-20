@@ -79,11 +79,9 @@ def get_tree_from_queryset(queryset, on_create_node=None, max_level=None):
     return tree
 
 
-def get_tree_queryset(model, node_id=None, max_level=None, include_root=True):
-    if node_id:
-        node = model.objects.get(pk=node_id)
-        max_level = node.level + 1
-        qs = BrainRegion.objects.exclude(parent__isnull=True)
+def get_tree_queryset(model, node_id=None, searchObject=None, max_level=None, include_root=True):
+    if True:
+        qs = searchObject.brain_regions.exclude(parent__isnull=True)
     else:
         qs = model._default_manager.all()
 
