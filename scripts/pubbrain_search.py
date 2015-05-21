@@ -105,7 +105,7 @@ def pubbrain_search(search):
         idList = Pmid.objects.filter(pubmed_id__in=record['IdList'])
         time4 = datetime.datetime.now()
         print
-        searchObject.pubmed_ids = idList
+        searchObject.pubmed_ids.add(*idList)
         print
         time5 = datetime.datetime.now()
     #     data = np.arange(4*4*3).reshape(4,4,3)
@@ -144,4 +144,4 @@ def pubbrain_search(search):
 
         
  
-# cProfile.runctx("pubbrain_search('sensory')", None, locals())
+cProfile.runctx("pubbrain_search('memory')", None, locals())

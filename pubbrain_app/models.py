@@ -120,8 +120,10 @@ class PubmedSearch(models.Model):
 @receiver(pre_delete, sender=PubmedSearch)
 def delSearchImg(sender, instance, **kwargs):
     path = instance.file.path
-    print path
-    os.remove(file)
+    try:
+        os.remove(path)
+    except OSError:
+        print 'Could not find file: %s' % path
 
 class SearchToRegion(models.Model):
     SIDES = (
