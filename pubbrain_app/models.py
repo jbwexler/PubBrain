@@ -109,21 +109,28 @@ class PubmedSearch(models.Model):
     def mappedRegionsList(self):
         querySet = self.searchtoregion_set.prefetch_related('brain_region').all()
         uniSet = querySet.filter(side='u').values_list('brain_region__mapped_regions__name','count')
-        uniDict = {}
-        for (name, count) in uniSet:
-            uniDict[name] = 0
-        for (name, count) in uniSet:
-            uniDict[name] += count
-        sorted_x = sorted(uniDict.items(), key=operator.itemgetter(1))
+        leftSet = querySet.filter(side='l').values_list('brain_region__mapped_regions__name','count')
+        rightSet = querySet.filter(side='r').values_list('brain_region__mapped_regions__name','count')
+        setList = [(uniSet, 'uni '),(leftSet,'left '),(rightSet,'right ')]
+        countDict = {}
+        for set, side in setList:
+            for (name, count) in set:
+                if name:
+                    countDict[side+name] = 0
+            for (name, count) in set:
+                if name:
+                    countDict[side+name] += count
+        sorted_x = sorted(countDict.items(), key=operator.itemgetter(1))
         return sorted_x
 
 @receiver(pre_delete, sender=PubmedSearch)
 def delSearchImg(sender, instance, **kwargs):
-    path = instance.file.path
-    try:
-        os.remove(path)
-    except OSError:
-        print 'Could not find file: %s' % path
+    if instance.file:
+        path = instance.file.path
+        try:
+            os.remove(path)
+        except OSError:
+            print 'Could not find file: %s' % path
 
 class SearchToRegion(models.Model):
     SIDES = (

@@ -35,7 +35,7 @@ def arrayToText(data):
     
 
 def pklsToNifti(searchObject, aff):
-    
+    time1 = datetime.datetime.now()
     sumArray = np.zeros((91,109,91))
     querySet = searchObject.searchtoregion_set.prefetch_related('brain_region').all()
     countDict = {}
@@ -46,48 +46,64 @@ def pklsToNifti(searchObject, aff):
     uniLeftList = [x for x in querySet.filter(side='ul').values_list('brain_region__mapped_regions__uni_pkls','count')] + [x for x in querySet.filter(side='ul').values_list('brain_region__mapped_regions__left_pkls', 'count')]
     uniRightList = [x for x in querySet.filter(side='ur').values_list('brain_region__mapped_regions__uni_pkls','count')] + [x for x in querySet.filter(side='ur').values_list('brain_region__mapped_regions__right_pkls', 'count')]
     
+    time2 = datetime.datetime.now()
+    
     allLists = uniList + leftList + rightList + uniLeftList + uniRightList
     for (pkl, count) in allLists:
-        if pkl is not None and pkl != '':
+        if pkl and 'cerebral_cortex' not in pkl:
             if countDict.get(pkl) == None:
                 countDict[pkl] = int(count)
             else:
                 countDict[pkl] += int(count)
         
     for pkl, count in countDict.items():
-        print pkl, count
         with open(os.path.join(BASE_DIR,'scripts/pickle_files/atlas_region_voxels', pkl),'rb') as input:
             voxels = pickle.load(input)
         sumArray[voxels] += count
-    print sumArray
     img = nib.Nifti1Image(sumArray, affine=aff)
     img.set_data_dtype(np.float32)
+    
+    time3 = datetime.datetime.now()
+    print time2 - time1
+    print time3 - time2
+    print
+    
     return img
 
 def tallyBrainRegions(idList, searchObject):
     # counts the number of instances each brain region in the results and adds these to the pubmed search object
     time1 = datetime.datetime.now()
-    uniRegions = idList.values_list('uni_brain_regions', flat =True)
+    uniList = BrainRegion.objects.filter(uni_pmids__in=idList)
+    leftList = BrainRegion.objects.filter(left_pmids__in=idList)
+    rightList = BrainRegion.objects.filter(right_pmids__in=idList)
+    uniLeftList = []
+    uniRightList = []
+    
+    uniCount = idList.values_list('uni_brain_regions').annotate(the_count=Count('uni_brain_regions'))
+    leftCount = idList.values_list('left_brain_regions').annotate(the_count=Count('left_brain_regions'))
+    rightCount = idList.values_list('right_brain_regions').annotate(the_count=Count('right_brain_regions'))
     time2 = datetime.datetime.now()
-    uniCount = Counter(uniRegions)
-    time3 = datetime.datetime.now()
-    leftRegions = idList.values_list('left_brain_regions', flat =True)
-    leftCount = Counter(leftRegions)
-    rightRegions = idList.values_list('right_brain_regions', flat =True)
-    rightCount = Counter(rightRegions)
-    uniLeftCount = {}
-    uniRightCount = {}
-    allDicts = {'u':uniCount, 'l':leftCount, 'r':leftCount, 'ul':uniLeftCount, 'ur':uniRightCount}
-    for side, dict in allDicts.items():
-        for id, count in dict.items():
-            if id is not None:
-                region = BrainRegion.objects.get(id=id)
-                SearchToRegion.objects.create(brain_region=region, pubmed_search=searchObject, count=count, side=side)  
-                  
+    uniLeftCount = []
+    uniRightCount = []
+    
+    allCounts = {'u':zip(uniList,uniCount), 'l':zip(leftList,leftCount), 'r':zip(rightList,rightCount), 'ul':zip(uniLeftList,uniLeftCount), 'ur':zip(uniRightList,uniRightCount)}
+    createList = []
+    for side, zip in allCounts.items():
+        time3 = datetime.datetime.now()
+
+
+        for (region,(id, count)) in zip:
+#             if id is not None:
+#                 region = BrainRegion.objects.get(id=id)
+            createList.append(SearchToRegion(brain_region=region, pubmed_search=searchObject, count=count, side=side))
+        time4 = datetime.datetime.now()
+        print time4 - time3
+
+    SearchToRegion.objects.bulk_create(createList)
+    
     print time2 - time1
     print time3 - time2
-    print 
-     
+    print
 def pubbrain_search(search):
 
     try:
@@ -121,23 +137,28 @@ def pubbrain_search(search):
         
 
         tallyBrainRegions(idList, searchObject)
-        
+        time6 = datetime.datetime.now()
         
         img = pklsToNifti(searchObject, affine2mm)
+        time7 = datetime.datetime.now()
         filename = os.path.join(MEDIA_ROOT, 'temp', search +'.nii.gz')
+        time8 = datetime.datetime.now()
         nib.save(img, filename)
         with open(filename) as imgFile:
             searchObject.file = File(imgFile)
             searchObject.last_updated = datetime.date.today()
             searchObject.save()
         os.remove(filename)
-        time6 = datetime.datetime.now()
+        time9 = datetime.datetime.now()
         
         print time2 - time1
         print time3 - time2
         print time4 - time3
         print time5 - time4
         print time6 - time5
+        print time7 - time6
+        print time8 - time7
+        print time9 - time8
         
     return searchObject
     
