@@ -39,10 +39,20 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_extensions',
+    'haystack',
     'coffeescript',
     'pubbrain_app',
     'mptt',
 )
+
+HAYSTACK_CONNECTIONS = {
+    'default': {
+        'ENGINE': 'haystack.backends.solr_backend.SolrEngine',
+        'URL': 'http://127.0.0.1:8983/solr'
+        # ...or for multicore...
+        # 'URL': 'http://127.0.0.1:8983/solr/mysite',
+    },
+}
 
 MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -99,3 +109,5 @@ IMAGE_DIR='/Users/poldrack/code/PubBrain/pubbrain_app/static/images'
 FIXTURE_DIRS = (
    'pubbrain_app/fixtures/',
 )
+
+HAYSTACK_SEARCH_RESULTS_PER_PAGE = 100000

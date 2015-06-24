@@ -18,7 +18,10 @@ import numpy as np
 import nibabel as nib
 import numpy.linalg as npl
 from collections import Counter
+from django.db.models import Count
 from PubBrain.settings import BASE_DIR, MEDIA_ROOT
+from django.db.models import Q
+from haystack.query import SearchQuerySet
 
     
 
@@ -73,29 +76,33 @@ def pklsToNifti(searchObject, aff):
 def tallyBrainRegions(idList, searchObject):
     # counts the number of instances each brain region in the results and adds these to the pubmed search object
     time1 = datetime.datetime.now()
-    uniList = BrainRegion.objects.filter(uni_pmids__in=idList)
-    leftList = BrainRegion.objects.filter(left_pmids__in=idList)
-    rightList = BrainRegion.objects.filter(right_pmids__in=idList)
-    uniLeftList = []
-    uniRightList = []
+#     uniList = BrainRegion.objects.filter(uni_pmids__in=idList)
+#     print uniList.query
+#     uniList = list(uniList)
+#     leftList = list(BrainRegion.objects.filter(left_pmids__in=idList))
+#     rightList = list(BrainRegion.objects.filter(right_pmids__in=idList))
+#     uniLeftList = []
+#     uniRightList = []
     
-    uniCount = idList.values_list('uni_brain_regions').annotate(the_count=Count('uni_brain_regions'))
-    leftCount = idList.values_list('left_brain_regions').annotate(the_count=Count('left_brain_regions'))
-    rightCount = idList.values_list('right_brain_regions').annotate(the_count=Count('right_brain_regions'))
+    uniCount = list(idList.values_list('uni_brain_regions').annotate(the_count=Count('uni_brain_regions')))
+    leftCount = list(idList.values_list('left_brain_regions').annotate(the_count=Count('left_brain_regions')))
+    rightCount = list(idList.values_list('right_brain_regions').annotate(the_count=Count('right_brain_regions')))
     time2 = datetime.datetime.now()
     uniLeftCount = []
     uniRightCount = []
     
-    allCounts = {'u':zip(uniList,uniCount), 'l':zip(leftList,leftCount), 'r':zip(rightList,rightCount), 'ul':zip(uniLeftList,uniLeftCount), 'ur':zip(uniRightList,uniRightCount)}
+    #allCounts = {'u':zip(uniList,uniCount), 'l':zip(leftList,leftCount), 'r':zip(rightList,rightCount), 'ul':zip(uniLeftList,uniLeftCount), 'ur':zip(uniRightList,uniRightCount)}
+    allCounts = {'u':uniCount, 'l':leftCount, 'r':rightCount, 'ul':uniLeftCount, 'ur':uniRightCount}
     createList = []
-    for side, zip in allCounts.items():
+    for side, zipList in allCounts.items():
         time3 = datetime.datetime.now()
 
 
-        for (region,(id, count)) in zip:
+        for (id, count) in zipList:
 #             if id is not None:
 #                 region = BrainRegion.objects.get(id=id)
-            createList.append(SearchToRegion(brain_region=region, pubmed_search=searchObject, count=count, side=side))
+            if id != None:
+                createList.append(SearchToRegion(brain_region_id=id, pubmed_search=searchObject, count=count, side=side))
         time4 = datetime.datetime.now()
         print time4 - time3
 
@@ -114,11 +121,14 @@ def pubbrain_search(search):
         
     if searchObject.last_updated is None or (datetime.date.today() - searchObject.last_updated).days > 30:
         time1 = datetime.datetime.now()
-        handle=Entrez.esearch(db='pubmed',term=search,retmax=100000)
+#         handle=Entrez.esearch(db='pubmed',term=search,retmax=100000)
         time2 = datetime.datetime.now()
-        record = Entrez.read(handle)
+#         record = Entrez.read(handle)
+        idPks = SearchQuerySet().filter(content=search).values_list('pk', flat=True)
+
         time3 = datetime.datetime.now()
-        idList = Pmid.objects.filter(pubmed_id__in=record['IdList'])
+        idList = Pmid.objects.filter(pubmed_id__in=idPks)
+#         idList = Pmid.objects.filter(pubmed_id__in=record['IdList'])
         time4 = datetime.datetime.now()
         print
         searchObject.pubmed_ids.add(*idList)

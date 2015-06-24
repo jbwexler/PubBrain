@@ -12,12 +12,13 @@ urlpatterns = patterns('',
     url(r'^(?P<pk>\d+)/papaya/embedview$', 
         papaya_js_embed,
         {'iframe':True},name='papaya_iframe_embed'),
-    url(r'^search', search, name='pubbrain_search'),
+    url(r'^pubsearch', search, name='pubbrain_search'),
     url(r'^admin/', include(admin.site.urls)),
     url(r'^(?P<pk>\d+)/js/embed$',
         papaya_js_embed,
         name='papaya_js_embed'),
     url(r'^datatable/results$', OrderListJson.as_view(), name='order_list_json'),
-    
+    url(r'^search/', include('haystack.urls')),
 )
+        
 urlpatterns += staticfiles_urlpatterns()
