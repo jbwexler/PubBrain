@@ -21,7 +21,7 @@ from collections import Counter
 from django.db.models import Count
 from PubBrain.settings import BASE_DIR, MEDIA_ROOT
 from django.db.models import Q
-from haystack.query import SearchQuerySet
+
 
     
 
@@ -121,14 +121,14 @@ def pubbrain_search(search):
         
     if searchObject.last_updated is None or (datetime.date.today() - searchObject.last_updated).days > 30:
         time1 = datetime.datetime.now()
-#         handle=Entrez.esearch(db='pubmed',term=search,retmax=100000)
+        handle=Entrez.esearch(db='pubmed',term=search,retmax=100000)
         time2 = datetime.datetime.now()
-#         record = Entrez.read(handle)
-        idPks = SearchQuerySet().filter(content=search).values_list('pk', flat=True)
+        record = Entrez.read(handle)
+#          idPks = SearchQuerySet().filter(content=search).values_list('pk', flat=True)
 
         time3 = datetime.datetime.now()
-        idList = Pmid.objects.filter(pubmed_id__in=idPks)
-#         idList = Pmid.objects.filter(pubmed_id__in=record['IdList'])
+#         idList = Pmid.objects.filter(pubmed_id__in=idPks)
+        idList = Pmid.objects.filter(pubmed_id__in=record['IdList'])
         time4 = datetime.datetime.now()
         print
         searchObject.pubmed_ids.add(*idList)

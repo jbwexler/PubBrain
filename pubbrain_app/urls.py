@@ -18,7 +18,6 @@ urlpatterns = patterns('',
         papaya_js_embed,
         name='papaya_js_embed'),
     url(r'^datatable/results$', OrderListJson.as_view(), name='order_list_json'),
-    url(r'^search/', include('haystack.urls')),
 )
         
 urlpatterns += staticfiles_urlpatterns()

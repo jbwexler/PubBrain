@@ -43,6 +43,7 @@ INSTALLED_APPS = (
     'coffeescript',
     'pubbrain_app',
     'mptt',
+    'watson',
 )
 
 HAYSTACK_CONNECTIONS = {

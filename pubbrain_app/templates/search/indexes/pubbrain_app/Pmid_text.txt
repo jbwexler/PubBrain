@@ -1,2 +1,0 @@
-{{ Pmid.title }}
-{{ Pmid.abstract }}
