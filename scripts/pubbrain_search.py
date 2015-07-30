@@ -3,7 +3,6 @@ from Bio.Entrez import efetch, read
 import pickle
 from pubbrain_app.models import BrainRegion, Pmid, PubmedSearch, SearchToRegion
 from scipy.special._ufuncs import errprint
-from astropy.modeling.functional_models import Delta1D
 Entrez.email='poldrack@stanford.edu'
 import datetime
 import cProfile
@@ -121,13 +120,10 @@ def pubbrain_search(search):
         
     if searchObject.last_updated is None or (datetime.date.today() - searchObject.last_updated).days > 30:
         time1 = datetime.datetime.now()
-        handle=Entrez.esearch(db='pubmed',term=search,retmax=100000)
+        handle=Entrez.esearch(db='pubmed',term=search+'[tiab]',retmax=100000)
         time2 = datetime.datetime.now()
         record = Entrez.read(handle)
-#          idPks = SearchQuerySet().filter(content=search).values_list('pk', flat=True)
-
         time3 = datetime.datetime.now()
-#         idList = Pmid.objects.filter(pubmed_id__in=idPks)
         idList = Pmid.objects.filter(pubmed_id__in=record['IdList'])
         time4 = datetime.datetime.now()
         print
@@ -175,4 +171,4 @@ def pubbrain_search(search):
 
         
  
-cProfile.runctx("pubbrain_search('memory')", None, locals())
+# cProfile.runctx("pubbrain_search('memory')", None, locals())

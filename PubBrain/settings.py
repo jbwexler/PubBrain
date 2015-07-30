@@ -39,11 +39,10 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_extensions',
-    'haystack',
     'coffeescript',
     'pubbrain_app',
     'mptt',
-    'watson',
+    'djcelery',
 )
 
 HAYSTACK_CONNECTIONS = {
@@ -74,14 +73,26 @@ WSGI_APPLICATION = 'PubBrain.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/1.7/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'pubbrain_dev2',
-	'USER': 'root',
-	'PASSWORD':'hungry',
+if 'RDS_DB_NAME' in os.environ:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': os.environ['RDS_DB_NAME'],
+            'USER': os.environ['RDS_USERNAME'],
+            'PASSWORD': os.environ['RDS_PASSWORD'],
+            'HOST': os.environ['RDS_HOSTNAME'],
+            'PORT': os.environ['RDS_PORT'],
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': 'pubbrain_dev2',
+	        'USER': 'root',
+	        'PASSWORD':'hungry',
+        }
+    }
 
 SHELL_PLUS_PRE_IMPORTS = (
     ('scripts.query_functions', '*'),
@@ -111,4 +122,4 @@ FIXTURE_DIRS = (
    'pubbrain_app/fixtures/',
 )
 
-HAYSTACK_SEARCH_RESULTS_PER_PAGE = 100000
+CELERY_RESULT_BACKEND='djcelery.backends.database:DatabaseBackend'

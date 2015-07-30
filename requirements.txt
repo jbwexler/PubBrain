@@ -1,6 +1,11 @@
 django
-django-extentions
+django-extensions
 MySQL-python
 biopython
 nibabel
 django-datatables-view
+django-celery
+django-coffeescript
+django-mptt
+scipy
+numpy

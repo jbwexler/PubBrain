@@ -43,13 +43,13 @@ class BrainRegion(MPTTModel):
     synonyms=models.TextField(blank=True, null=True)
     
     # all parents
-    allParents=models.ManyToManyField('self', null=True, blank=True, symmetrical=False, related_name='allChildren')
+    allParents=models.ManyToManyField('self', blank=True, symmetrical=False, related_name='allChildren')
     
     # best parent, which will bes used in the hierarchical graph
     parent = TreeForeignKey('self', null=True, blank=True, related_name='children', db_index=True)
 
     # region(s) that best represent this region (can be itself). 
-    mapped_regions=models.ManyToManyField('self', null=True, blank=True,symmetrical=False)
+    mapped_regions=models.ManyToManyField('self', blank=True,symmetrical=False)
     
     # generation level, highest on the hierarchy (ie 'brain' or 'encephalon') should be closest to 0
     topological_sort = models.IntegerField(null=True, blank=True)
@@ -77,12 +77,12 @@ class BrainRegion(MPTTModel):
 # represents a PubMed ID
 
 class Pmid(models.Model):
-    pubmed_id=models.IntegerField(max_length=20, db_index=True)
-    date_added=models.DateField(auto_now_add=True,auto_now=True)
+    pubmed_id=models.IntegerField(db_index=True)
+    date_added=models.DateField(auto_now_add=True)
     # link to the brain regions mentioned in the abstract
-    uni_brain_regions=models.ManyToManyField(BrainRegion, null=True, blank=True, related_name='uni_pmids')
-    left_brain_regions=models.ManyToManyField(BrainRegion, null=True, blank=True, related_name='left_pmids')
-    right_brain_regions=models.ManyToManyField(BrainRegion, null=True, blank=True, related_name='right_pmids')
+    uni_brain_regions=models.ManyToManyField(BrainRegion, blank=True, related_name='uni_pmids')
+    left_brain_regions=models.ManyToManyField(BrainRegion, blank=True, related_name='left_pmids')
+    right_brain_regions=models.ManyToManyField(BrainRegion, blank=True, related_name='right_pmids')
     title=models.CharField(max_length=10000,default='')
     abstract = models.TextField(max_length=100000, default='')
     
@@ -101,7 +101,7 @@ class PubmedSearch(models.Model):
     # the pubmed query for the region
     query=models.CharField(max_length=255)
     pubmed_ids=models.ManyToManyField(Pmid)
-    brain_regions=models.ManyToManyField(BrainRegion, null=True, blank=True, through='SearchToRegion')
+    brain_regions=models.ManyToManyField(BrainRegion, blank=True, through='SearchToRegion')
     @classmethod
     def create(cls, query):
         result = cls(query=query)
