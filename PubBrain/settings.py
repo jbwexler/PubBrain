@@ -123,3 +123,6 @@ FIXTURE_DIRS = (
 )
 
 CELERY_RESULT_BACKEND='djcelery.backends.database:DatabaseBackend'
+
+STATIC_ROOT = os.path.join(BASE_DIR, "..", "www", "static")
+STATIC_URL = '/static/'
