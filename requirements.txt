@@ -8,6 +8,7 @@ django-datatables-view
 django-celery
 django-coffeescript
 django-mptt
+Celery
 numpy
 #scipy
 
