@@ -9,5 +9,5 @@ django-celery
 django-coffeescript
 django-mptt
 numpy
-scipy
+#scipy
 
