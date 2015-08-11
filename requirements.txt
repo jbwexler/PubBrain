@@ -8,5 +8,5 @@ django-datatables-view
 django-coffeescript
 django-mptt
 numpy
-scipy
+# scipy
 
