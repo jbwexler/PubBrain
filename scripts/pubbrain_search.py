@@ -2,7 +2,6 @@ from Bio import Entrez
 from Bio.Entrez import efetch, read
 import pickle
 from pubbrain_app.models import BrainRegion, Pmid, PubmedSearch, SearchToRegion
-from scipy.special._ufuncs import errprint
 Entrez.email='poldrack@stanford.edu'
 import datetime
 import cProfile
