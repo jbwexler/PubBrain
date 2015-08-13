@@ -8,6 +8,8 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/1.7/ref/settings/
 """
 
+
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
@@ -42,6 +44,7 @@ INSTALLED_APPS = (
     'coffeescript',
     'pubbrain_app',
     'mptt',
+    'storages',
 )
 
 HAYSTACK_CONNECTIONS = {
@@ -125,3 +128,8 @@ CELERY_RESULT_BACKEND='djcelery.backends.database:DatabaseBackend'
 
 STATIC_ROOT = os.path.join(BASE_DIR, "..", "www", "static")
 STATIC_URL = '/static/'
+
+try:
+    from aws_settings import *
+except ImportError:
+    pass
