@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/1.7/ref/settings/
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
+import imp
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 
@@ -130,6 +131,6 @@ STATIC_ROOT = os.path.join(BASE_DIR, "..", "www", "static")
 STATIC_URL = '/static/'
 
 try:
-    from aws_settings import *
-except ImportError:
+    foo = imp.load_source('*', '/opt/python/aws_settings.py')
+except:
     pass
