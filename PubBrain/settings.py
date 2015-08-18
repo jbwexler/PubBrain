@@ -131,6 +131,6 @@ STATIC_ROOT = os.path.join(BASE_DIR, "..", "www", "static")
 STATIC_URL = '/static/'
 
 try:
-    foo = imp.load_source('*', '/opt/python/aws_settings.py')
-except:
+    import aws_settings
+except ImportError:
     pass
