@@ -131,6 +131,6 @@ STATIC_ROOT = os.path.join(BASE_DIR, "..", "www", "static")
 STATIC_URL = '/static/'
 
 try:
-    import aws_settings
+    from aws_settings import *
 except ImportError:
     pass
