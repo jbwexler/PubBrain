@@ -9,4 +9,5 @@ django-coffeescript
 django-mptt
 numpy
 # scipy
-
+django-storages
+boto
